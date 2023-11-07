@@ -1,0 +1,411 @@
+{
+  "JOB CARD": {
+    "scope": "JCL",
+    "prefix": "JOB CARD",
+    "description": "Job Card.",
+    "body": [
+      "//${1:JOBNAME} JOB ${2:(#ACCT)},'${3:DESCRIPTION}',MSGCLASS=${4:A},CLASS=${5:A},",
+      "// MSGLEVEL=${6:(1,1)},REGION=0M,NOTIFY=${7:&SYSUID.},SYSAFF=${8:ANY}",
+      "//****",
+      "//* ${9:COMMENTS} ",
+      "//****",
+      "//*  ",
+      "$0"
+    ]
+  },
+  "Job/IEBGENER ": {
+    "scope": "JCL",
+    "prefix": "Job/IEBGENER",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IEBGENER ",
+      "//SYSPRINT DD SYSOUT=*",
+      "//SYSUT1   DD DSN=${2:IN.DSN},DISP=SHR ",
+      "//SYSUT2   DD DSN=${3:OUT.DSN},DISP=${4:(NEW,CATLG)}, ",
+      "//            DCB=.SYSUT1,SPACE=${5:(TRK,(1,1,10))},DSNTYPE=LIBRARY",
+      "//SYSIN    DD *",
+      "${6:OPTIONS}",
+      "/*"
+    ],
+    "description": "IEBGENER create/load a dataset."
+  },
+  "IEBGENER GENERATE": {
+    "scope": "JCL",
+    "prefix": "IEBGENER-GENERATE",
+    "body": " GENERATE MAXNAME=$1,MAXGPS=$2 ",
+    "description": "IEBGENER GENERATE Statement."
+  },
+  "IEBGENER MEMBER": {
+    "scope": "JCL",
+    "prefix": "IEBGENER-MEMBER",
+    "body": "MEMBER NAME=$1",
+    "description": "IEBGENER MEMBER Statement."
+  },
+  "IEBGENER RECORD": {
+    "scope": "JCL",
+    "prefix": "IEBGENER-RECORD",
+    "body": "RECORD IDENT=($1,$2,$3)",
+    "description": "IEBGENER RECORD Statement."
+  },
+  "Job/New Dataset ": {
+    "scope": "JCL",
+    "prefix": "New Dataset Definition",
+    "body": [
+      "//${1:DDNAME} DD DSN=${2:HLQ.DSNAME}, ",
+      "//          DISP=(NEW,CATLG),LRECL=${3:80},RECFM=${4:FB},DSORG=${5:PO},",
+      "//          SPACE=(${6:TRK},(100,10),RLSE),",
+      "//          BLKSIZE=(${7:32720}),DSNTYPE=${8:LIBRARY}",
+      "$0"
+    ],
+    "description": "Define new dataset."
+  },
+  "DEFAULT EXEC": {
+    "scope": "JCL",
+    "prefix": "EXEC",
+    "description": "Default EXEC card.",
+    "body": ["//${1:STEPNAME} EXEC ${2:PGM=IEFBR14}"]
+  },
+  "IEBCOPY Utility": {
+    "prefix": "IEBCOPY",
+    "scope": "JCL",
+    "description": "Basic IEBCOPY.",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IEBCOPY",
+      "//SYSPRINT  DD SYSOUT=*",
+      "//${2:INDD}      DD DISP=SHR,DSN=${3:IN.DSN}",
+      "//${4:OUTDD}     DD DISP=SHR,DSN=${5:OUT.DSN}",
+      "//SYSIN     DD *",
+      " COPY OUTDD=${2:INDD},INDD=${4:OUTDD} ",
+      "/*",
+      "$0"
+    ]
+  },
+  "IDCAMS New Cluster": {
+    "prefix": "IDCAMS-Cluster",
+    "scope": "JCL",
+    "description": "IDCAMS New Cluster.",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IDCAMS ",
+      "//SYSPRINT    DD SYSOUT=*",
+      "//SYSUDUMP    DD SYSOUT=*",
+      "//AMSDUMP     DD SYSOUT=*",
+      "//SYSIN       DD *",
+      " DEFINE CLUSTER (NAME(${2:YOUR.NEW.CLUSTER}) -",
+      " ${3|INDEXED,LINEAR,NONINDEXED,NUMBERED|} - ",
+      " ${4|CYLINDERS,MEGABYTES,TRACKS|}(${5:p s}) - ",
+      " )",
+      "/*",
+      "$0"
+    ]
+  },
+  "SORT - Basic": {
+    "prefix": "SORT-Basic",
+    "scope": "JCL",
+    "description": "SORT - Basic.",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=SORT ",
+      "//SYSPRINT  DD SYSOUT=*",
+      "//SYSOUT    DD SYSOUT=*",
+      "//SYSUDUMP  DD SYSOUT=*",
+      "//SORTIN    DD DISP=SHR,DSN=${2:IN.DSN}",
+      "//SORTOUT   DD DSN=${3:OUT.DSN},",
+      "//     DISP=(NEW,CATLG),UNIT=SYSDA,",
+      "//     SPACE=(${4:TRK},(100,10),RLSE),",
+      "//     DCB=(RECFM=${5:FB},LRECL=${6:80},BLKSIZE=${7:0},DSORG=${8:PS})",
+      "//SORTWK01  DD UNIT=DISK,SPACE=(${9:CYL},(5,5),RLSE)",
+      "//SYSIN     DD *",
+      "  SORT FIELDS=(${10:start},${11:length},${12:format},${13:order})",
+      "/*",
+      "$0"
+    ]
+  },
+  "SORT - Split": {
+    "prefix": "SORT-Split",
+    "scope": "JCL",
+    "description": "SORT - Split.",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=SORT ",
+      "//SYSPRINT  DD SYSOUT=*",
+      "//SYSOUT    DD SYSOUT=*",
+      "//SYSUDUMP  DD SYSOUT=*",
+      "//SORTIN    DD DISP=SHR,DSN=${2:IN.DSN}",
+      "//SORTOF01  DD DSN=${3:OUT01.DSN},",
+      "//     DISP=(NEW,CATLG),UNIT=SYSDA,",
+      "//     SPACE=(${4:TRK},(100,10),RLSE),",
+      "//     DCB=(RECFM=${5:FB},LRECL=${6:80},BLKSIZE=${7:0},DSORG=${8:PS})",
+      "//SORTOF02  DD DSN=${9:OUT02.DSN},",
+      "//     DISP=(NEW,CATLG),UNIT=SYSDA,",
+      "//     SPACE=(${10:TRK},(100,10),RLSE),",
+      "//     DCB=(RECFM=${11:FB},LRECL=${12:80},BLKSIZE=${13:0},DSORG=${14:PS})",
+      "//SORTWK01  DD UNIT=DISK,SPACE=(${15:CYL},(5,5),RLSE)",
+      "//SORTWK02  DD UNIT=DISK,SPACE=(${16:CYL},(5,5),RLSE)",
+      "//SYSIN     DD *",
+      "  SORT FIELDS=COPY",
+      "  OUTFIL FILES=01,INCLUDE=(1,5,CH,EQ,C'${17:value1}')",
+      "  OUTFIL FILES=02,INCLUDE=(1,5,CH,EQ,C'${18:value2}')",
+      "/*",
+      "$0"
+    ]
+  },
+  "SORT - Remove Duplicates": {
+    "prefix": "SORT-Remove Duplicates",
+    "scope": "JCL",
+    "description": "SORT - Remove Duplicates.",
+    "body": ["//SYSIN     DD *", "  SORT FIELDS=(${1:start},${2:length},${3:format})", "  SUM FIELDS=NONE", "/*", "$0"]
+  },
+  "IOEAGFMT Aggregate compatibility": {
+    "scope": "JCL",
+    "prefix": "IOEAGFMT-AGGREGATE",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IOEAGFMT,",
+      "// PARM=('-aggregate ${2:YOUR.DATASET} -compat')",
+      "//SYSPRINT DD SYSOUT=*",
+      "//SYSUDUMP DD SYSOUT=*",
+      "//CEEDUMP  DD SYSOUT=*",
+      "//STDOUT   DD SYSOUT=*",
+      "//STDERR   DD SYSOUT=*",
+      "$0"
+    ],
+    "description": "CHANGE aggregate mode."
+  },
+  "IKJEFT01 Mount zfs": {
+    "scope": "JCL",
+    "prefix": "IKJEFT01-MOUNT",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IKJEFT01",
+      "//SYSTSPRT DD SYSOUT=*",
+      "//SYSTSIN  DD *",
+      "  MOUNT +",
+      "  FILESYSTEM('${2:YOUR.DATASET}') +",
+      "  MOUNTPOINT('${3:/your/mountpont}') +",
+      "  TYPE(ZFS) +",
+      "  MODE(RDWR)",
+      "/*",
+      "$0"
+    ],
+    "description": "IKJEFT01 for mount zfs."
+  },
+  "BPXBATCH SH with su": {
+    "scope": "JCL",
+    "prefix": "BPXBATCH-SU",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=BPXBATCH,",
+      "// PARM='SH echo ${2:your command} | su'",
+      "//STDOUT DD SYSOUT=*",
+      "//STDERR DD SYSOUT=*",
+      "$0"
+    ],
+    "description": "BPXBATCH for su commands."
+  },
+  "FTP": {
+    "prefix": "FTP",
+    "description": "JCL to FTP datasets",
+    "body": [
+      "//${1:STEPNAME}     EXEC PGM=FTP,PARM='${2:!xxx.xx.xx.xx (EXIT)!}'\r",
+      "//NETRC     DD DISP=SHR,DSN=${3:HLQ.DSN1}\r",
+      "//* NETRC points to a record of specific format to login to an LPAR\r",
+      "//SYSUT2   DD DISP=SHR,DSN=${4:HLQ.DSN2}\r",
+      "//INPUT     DD *\r",
+      "site rdw\r",
+      "GET TEST.VB //DD:SYSUT2\r",
+      "quit\r",
+      "/*\r",
+      "//\r",
+      "//*  GET <FromHost File>  //DD: <ToHost Dataset>\r",
+      "//*  inetcat changes (and prefix inetcat... odd)\r",
+      "cd inetcat\r",
+      "structure record\r",
+      "binary"
+    ],
+    "scope": "jcl"
+  },
+  "IDCAMS Define VSAM Cluster": {
+    "prefix": "IDCAMS Define VSAM Cluster",
+    "description": "JCL to Define VSAM Cluster",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IDCAMS\r",
+      "//SYSPRINT DD   SYSOUT=*\r",
+      "//SYSIN    DD   *\r",
+      " DEFINE    CLUSTER  (NAME(${2:HLQ.DSN1}.VSAM)                 -\r",
+      "                    TRACKS(10 1)                              -\r",
+      "                    RECORDSIZE(2964 2964)                     -\r",
+      "                    FREESPACE(10 15)                          -\r",
+      "                    KEYS(6 0)                                 -\r",
+      "                    INDEXED)                                  -\r",
+      "           DATA     (NAME(${2:HLQ.DSN1}.DATA)                 -\r",
+      "                    CISZ(8192))                               -\r",
+      "           INDEX    (NAME(${2:HLQ.DSN1}.INDEX))\r",
+      "/*\r",
+      "//"
+    ],
+    "scope": "jcl"
+  },
+  "IEBCOMPR": {
+    "prefix": "IEBCOMPR",
+    "description": "JCL to compare datasets",
+    "body": [
+      "//${1:STEPNAME}    EXEC PGM=IEBCOMPR\r",
+      "//SYSPRINT DD  SYSOUT=A\r",
+      "//SYSUT1   DD  DSNAME=${2:HLQ.DSN1},DISP=SHR\r",
+      "//SYSUT2   DD  DSNAME=${3:HLQ.DSN2},DISP=SHR\r",
+      "//SYSIN    DD  *\r",
+      "      COMPARE  TYPORG=PO\r",
+      "/*\r",
+      "//"
+    ],
+    "scope": "jcl"
+  },
+  "IEBCOPY (From an existing library to a new PDS)": {
+    "prefix": "IEBCOPY (From an existing library to a new PDS)",
+    "description": "JCL to copy existing library to new PDS",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IEBCOPY\r",
+      "//SYSPRINT DD SYSOUT=*\r",
+      "//SYSIN    DD DUMMY\r",
+      "//SYSUT1   DD DISP=SHR,DSN=${2:HLQ.LIBRARY}\r",
+      "//SYSUT2   DD DISP=(NEW,CATLG,DELETE),DSN=${3:HLQ.NEW.PDS},\r",
+      "//   LIKE=${2:HLQ.LIBRARY}"
+    ],
+    "scope": "jcl"
+  },
+  "IEBCOPY (From a Library to an existing PDS)": {
+    "prefix": "IEBCOPY (From a Library to an existing PDS)",
+    "description": "JCL to copy from library to existing PDS",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IEBCOPY\r",
+      "//SYSPRINT DD SYSOUT=*\r",
+      "//SYSIN    DD DUMMY\r",
+      "//SYSUT2   DD DISP=SHR,DSN=${2:HLQ.LIBRARY}\r",
+      "//SYSUT1   DD DISP=SHR,DSN=${3:HLQ.EXIST.PDS}"
+    ],
+    "scope": "jcl"
+  },
+  "IEBCOPY (VSAM to QSAM)": {
+    "prefix": "IEBCOPY (VSAM to QSAM)",
+    "description": "JCL to copy VSAM to QSAM",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IDCAMS\r",
+      "//SYSPRINT DD SYSOUT=A\r",
+      "//VSAM DD DSN=${2:HLQ.VSAM},DISP=OLD\r",
+      "//SEQ  DD DSN=${3:HLQ.QSAM},UNIT=SYSDA,\r",
+      "//     SPACE=(TRK,(10,10)),\r",
+      "//     DISP=(NEW,CATLG),\r",
+      "//     DCB=(LRECL=1000,BLKSIZE=1004,RECFM=VB)\r",
+      "//SYSIN DD *\r",
+      "  REPRO -\r",
+      "    INFILE(VSAM) -\r",
+      "    OUTFILE(SEQ)",
+      "/*"
+    ],
+    "scope": "jcl"
+  },
+  "IEBDG": {
+    "prefix": "IEBDG",
+    "description": "JCL to generate test data",
+    "body": [
+      "//${1:STEPNAME}    EXEC PGM=IEBDG\r",
+      "//SYSPRINT DD SYSOUT=*\r",
+      "//OUTFILE  DD DSN=${2:HLQ.TEST.PDS(member)},DISP=SHR\r",
+      "//SYSIN  DD *\r",
+      " DSD OUTPUT=(OUTFILE)\r",
+      " FD NAME=${3:!FIELD1!},LENGTH=20,FORMAT=AL,ACTION=RP\r",
+      " FD NAME=${4:!FIELD2!},LENGTH=20,PICTURE=20,'ALEXANDRIA          '\r",
+      " FD NAME=${5:!FIELD3!},LENGTH=20,PICTURE=20,'RIDGEWOOD           '\r",
+      " FD NAME=${6:!FIELD4!},LENGTH=2,PICTURE=2,'NJ'\r",
+      " FD NAME=${7:!FIELD5!},LENGTH=5,PICTURE=5,'06758'\r",
+      " CREATE QUANTITY=100,NAME=(${3:!FIELD1!},${4:!FIELD2!},${5:!FIELD3!},${6:!FIELD4!},${7:!FIELD5!}),\r",
+      "        FILL=X'40'\r",
+      " END\r",
+      "/*"
+    ],
+    "scope": "jcl"
+  },
+  "IEFBR14": {
+    "prefix": "IEFBR14",
+    "description": "JCL to run IEFBR14 to ERASE a dataset",
+    "body": ["//${1:STEPNAME}    EXEC PGM=IEFBR14\r", "//THEFILE  DD   DSN=${2:HLQ.DSN},DISP=(OLD,DELETE)"],
+    "scope": "jcl"
+  },
+  "IEBGENER": {
+    "prefix": "IEBGENER",
+    "description": "JCL to create multiple datasets",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IEBGENER,COND=(0,NE)\r",
+      "//SYSPRINT DD SYSOUT=*\r",
+      "//SYSIN DD DUMMY\r",
+      "//SYSUT1 DD DSN=${2:HLQ.DS1},DISP=(NEW,CATLG,DELETE),\r",
+      "//          VOL=SER=${5:VOLSER1},UNIT=3390,SPACE=(TRK,(1,1),RLSE),\r",
+      "//          DCB=(LRECL=80,BLKSIZE=800,RECFM=FB,DSORG=PS)\r",
+      "//SYSUT2 DD DSN=${3:HLQ.DS2},DISP=(NEW,CATLG,DELETE),\r",
+      "//          VOL=SER=${6:VOLSER2},UNIT=3390,SPACE=(TRK,(1,1),RLSE),\r",
+      "//          DCB=(LRECL=80,BLKSIZE=800,RECFM=FB,DSORG=PS)\r",
+      "//SYSUT3 DD DSN=${4:HLQ.DS3},DISP=(NEW,CATLG,DELETE),\r",
+      "//          VOL=SER=${7:VOLSER3},UNIT=3390,SPACE=(TRK,(1,1),RLSE),\r",
+      "//          DCB=(LRECL=80,BLKSIZE=800,RECFM=FB,DSORG=PS)\r",
+      "//"
+    ],
+    "scope": "jcl"
+  },
+  "REPRO": {
+    "prefix": "REPRO",
+    "description": "JCL to run IDCAMS REPRO",
+    "body": [
+      "//${1:STEPNAME} EXEC PGM=IDCAMS\r",
+      "//SYSPRINT DD   SYSOUT=*\r",
+      "//SYSUT1   DD DSN=${2:HLQ.DSN1},DISP=SHR\r",
+      "//SYSUT2   DD DSN=${3:HLQ.DSN2},\r",
+      "//            DISP=(NEW,CATLG,DELETE),\r",
+      "//            SPACE=(TRK,(100,10),RLSE),   \r",
+      "//            DCB=(RECFM=V,BLKSIZE=0,LRECL=${4:800})\r",
+      "//SYSIN    DD   *\r",
+      "  REPRO -\r",
+      "  INFILE(SYSUT1) -\r",
+      "  OUTFILE(SYSUT2)\r",
+      "/*\r",
+      "//"
+    ],
+    "scope": "jcl"
+  },
+  "SORT (Create a Subset)": {
+    "prefix": "SORT (Create a Subset)",
+    "description": "JCL to create a subset of a dataset using SORT",
+    "body": [
+      "//${1:STEPNAME}  EXEC PGM=SORT,REGION=0M                    \r",
+      "//SORTIN   DD  DISP=SHR,                                    \r",
+      "//             DSN=${2:HLQ.DSN1}                            \r",
+      "//SYSIN    DD  *                                            \r",
+      "    SORT FIELDS=COPY STARTREC=${3:1},ENDREC=${4:100}        \r",
+      "//SORTOUT  DD  LIKE=${2:HLQ.DSN1},                          \r",
+      "//             DISP=(NEW,CATLG,DELETE),                     \r",
+      "//             DSN=${5:HLQ.DSN2}                            \r",
+      "//SYSPRINT DD SYSOUT=*                                      \r",
+      "//SYSUDUMP DD SYSOUT=*                                      \r",
+      "//SYSOUT   DD SYSOUT=*"
+    ],
+    "scope": "jcl"
+  },
+  "XMIT": {
+    "prefix": "XMIT",
+    "description": "JCL to transmit (XMIT) a dataset",
+    "body": [
+      "//${1:STEPNAME}    EXEC PGM=IKJEFT01,DYNAMNBR=20\r",
+      "//DDIN     DD  DISP=SHR,DSN=${2:HLQ.DSN1}\r",
+      "//DDOUT    DD  DISP=(,CATLG),DSN=${3:HLQ.DSN2},\r",
+      "//             DCB=(RECFM=FB,LRECL=80,BLKSIZE=27800),\r",
+      "//             SPACE=(TRK,(5,5,5),RLSE),UNIT=SYSDA\r",
+      "//SYSPRINT DD  SYSOUT=*\r",
+      "//SYSTSPRT DD  SYSOUT=*\r",
+      "//SYSTSIN  DD  *\r",
+      "  TRANSMIT ${1:STEPNAME} +\r",
+      "     NOCOPYLIST +\r",
+      "     DDNAME(DDIN) +\r",
+      "     NOEPILOG +\r",
+      "     NOLOG +\r",
+      "     NONOTIFY +\r",
+      "     OUTDDNAME(DDOUT) +\r",
+      "     PDS +\r",
+      "     NOPROLOG\r",
+      "//"
+    ],
+    "scope": "jcl"
+  }
+}

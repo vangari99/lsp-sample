@@ -1,0 +1,506 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Job Control Language",
+  "patterns": [
+    {
+      "include": "#jcl_syntax"
+    }
+  ],
+  "repository": {
+    "jcl_syntax": {
+      "patterns": [
+        {
+          "include": "#lineTooLong"
+        },
+        {
+          "include": "#lineComment"
+        },
+        {
+          "include": "#parseLine"
+        },
+        {
+          "include": "#jclLineStart"
+        }
+      ]
+    },
+    "additionaljclHighlight": {
+      "patterns": [
+        {
+          "include": "#operators"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "include": "#variables"
+        }
+      ]
+    },
+    "lineTooLong": {
+      "patterns": [
+        {
+          "name": "invalid.illegal.jcl",
+          "match": "^.{81,}"
+        }
+      ]
+    },
+    "lineComment": {
+      "patterns": [
+        {
+          "match": "(\\/\\/\\*.{69,69})(.*)",
+          "name": "comment.line.double-slash.jcl",
+          "captures": {
+            "1": {
+              "name": "comment.line.double-slash.jcl"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#sequenceNumbers"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "match": "\\/\\/\\*.*",
+          "name": "comment.line.double-slash.jcl"
+        }
+      ]
+    },
+    "parseLine": {
+      "patterns": [
+        {
+          "match": "(.{72,72})(.{0,8})",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#jclLineStart"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#sequenceNumbers"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "jclLineStart": {
+      "patterns": [
+        {
+          "include": "#inlineDD"
+        },
+        {
+          "include": "#conditionals"
+        },
+        {
+          "include": "#continuation"
+        },
+        {
+          "include": "#jclLineReuse"
+        }
+      ]
+    },
+    "jclLineReuse": {
+      "patterns": [
+        {
+          "match": "([^*]\\S*)?\\s+(.*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#jclStatement"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "inlineDD": {
+      "patterns": [
+        {
+          "begin": "([^*]\\S*)?\\s+(DD\\s+\\*\\S*?)\\s(.*)",
+          "end": "((^\\/\\*)|(^\\/\\/\\s+$)|(^\\/\\/(?!\\*).*?$)|(^\\/\\/\\*.*$))(.*)",
+          "beginCaptures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "2": {
+              "name": "keyword.other.jcl"
+            },
+            "3": {
+              "name": "comment.line.double-slash.jcl"
+            }
+          },
+          "endCaptures": {
+            "2": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "4": {
+              "patterns": [
+                {
+                  "include": "#jclLineReuse"
+                }
+              ]
+            },
+            "5": {
+              "name": "comment.line.double-slash.jcl"
+            },
+            "6": {
+              "name": "comment.line.double-slash.jcl"
+            }
+          },
+          "contentName": "entity.name.type.jcl"
+        }
+      ]
+    },
+    "conditionals": {
+      "patterns": [
+        {
+          "match": "^([^*]\\S*)?\\s+(IF)\\s+(.*)(THEN)\\s+(.*)$",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#conditional"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#conditionalControl"
+                }
+              ]
+            },
+            "4": {
+              "patterns": [
+                {
+                  "include": "#conditional"
+                }
+              ]
+            },
+            "5": {
+              "patterns": [
+                {
+                  "include": "#comments"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "begin": "^([^*]\\S*)?\\s+(IF)\\s",
+          "end": "^(\\/\\/)(.*)(THEN)\\s+(.*)",
+          "patterns": [
+            {
+              "include": "#conditionalLine"
+            }
+          ],
+          "beginCaptures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#conditional"
+                }
+              ]
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#conditionalControl"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#conditional"
+                }
+              ]
+            },
+            "4": {
+              "name": "comment.line.double-slash.jcl"
+            }
+          }
+        }
+      ]
+    },
+    "conditionalLine": {
+      "patterns": [
+        {
+          "match": "^(\\/\\/)?(\\s+)(.*)$",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#conditionalControl"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "match": "(\\S+.*)$",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#conditionalControl"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "conditionalControl": {
+      "patterns": [
+        {
+          "include": "#control"
+        }
+      ]
+    },
+    "continuation": {
+      "patterns": [
+        {
+          "begin": "^(([^*]\\S*)?\\s+(\\S+)\\s+.*,)$",
+          "end": "(\\/\\/)(\\s+)(\\S+[^,]\\s+.*)",
+          "patterns": [
+            {
+              "include": "#jclLineContinued"
+            }
+          ],
+          "beginCaptures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#jclLineReuse"
+                }
+              ]
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#jclArguments"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "jclLineContinued": {
+      "patterns": [
+        {
+          "match": "(\\/\\/)(\\s+)(.*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#labels"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#jclArguments"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "jclStatement": {
+      "patterns": [
+        {
+          "match": "(\\S+)\\s*(.*)",
+          "captures": {
+            "1": {
+              "name": "keyword.other.jcl"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#jclArguments"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "jclArguments": {
+      "patterns": [
+        {
+          "include": "#stringType"
+        },
+        {
+          "match": "(\\S*)(.*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.jcl",
+              "patterns": [
+                {
+                  "include": "#additionaljclHighlight"
+                }
+              ]
+            },
+            "2": {
+              "name": "comment.line.double-slash.jcl"
+            }
+          }
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "match": "((?<!&)&|[%?])(.{,8}?)(\\.?)((?=\\W)|$)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.variable"
+            },
+            "2": {
+              "name": "variable.other.jcl"
+            },
+            "3": {
+              "name": "punctuation.definition.variable"
+            }
+          }
+        }
+      ]
+    },
+    "stringType": {
+      "patterns": [
+        {
+          "match": "(\\S*?)('.*?')(.*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.jcl",
+              "patterns": [
+                {
+                  "include": "#additionaljclHighlight"
+                }
+              ]
+            },
+            "2": {
+              "name": "string.quoted.single.jcl",
+              "patterns": [
+                {
+                  "include": "#variables"
+                }
+              ]
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#jclArguments"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "labels": {
+      "match": ".*",
+      "name": "entity.name.function.jcl"
+    },
+    "conditional": {
+      "match": ".*",
+      "name": "keyword.other.jcl"
+    },
+    "control": {
+      "match": ".*",
+      "name": "variable.parameter.jcl"
+    },
+    "operators": {
+      "match": "[=(),+]",
+      "name": "keyword.operator.jcl"
+    },
+    "numbers": {
+      "match": "(?<=[=(),*\\s+])-?\\d*(?=[=(),*+\\s]|$)",
+      "name": "constant.numeric.jcl"
+    },
+    "sequenceNumbers": {
+      "match": ".*",
+      "name": "constant.numeric.jcl"
+    },
+    "comments": {
+      "match": ".*",
+      "name": "comment.line.double-slash.jcl"
+    }
+  },
+  "scopeName": "source.jcl"
+}
