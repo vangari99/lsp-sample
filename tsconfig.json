@@ -6,7 +6,15 @@
 		"outDir": "out",
 		"rootDir": "src",
 		"sourceMap": true,
-		"strict": false
+		"strict": false,
+		"noImplicitAny": false,
+		"removeComments": false,
+		"noUnusedLocals": false,
+		"noImplicitThis": true,
+		"inlineSourceMap": false,
+		"preserveConstEnums": true,
+		"strictNullChecks": true,
+		"noUnusedParameters": false
 	},
 	"include": [
 		"src"

@@ -17,7 +17,8 @@
 		"vscode": "^1.75.0"
 	},
 	"activationEvents": [
-		"onLanguage:jcl"
+		"onLanguage:jcl",
+		"onCommand:lsp-sample.syncFiles"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
@@ -44,6 +45,13 @@
 				}
 			}
 		},
+		"commands": [
+			{
+				"command": "lsp-sample.syncFiles",
+				"title": "Sync the updated files",
+				"category": "LSP SAMPLE"
+			}
+		],
 		"languages": [
 			{
 				"id": "jcl",
