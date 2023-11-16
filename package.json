@@ -18,7 +18,8 @@
 	},
 	"activationEvents": [
 		"onLanguage:jcl",
-		"onCommand:lsp-sample.syncFiles"
+		"onCommand:lsp-sample.syncFiles",
+		"onCommand:lsp-sample.syncFile"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
@@ -45,10 +46,22 @@
 				}
 			}
 		},
+		"keybindings": [
+			{
+			  "command": "lsp-sample.syncFile",
+			  "key": "ctrl+s",
+			  "mac": "cmd+alt+s"
+			}
+		],
 		"commands": [
 			{
 				"command": "lsp-sample.syncFiles",
 				"title": "Sync the updated files",
+				"category": "LSP SAMPLE"
+			},
+			{
+				"command": "lsp-sample.syncFile",
+				"title": "Sync the updated file",
 				"category": "LSP SAMPLE"
 			}
 		],

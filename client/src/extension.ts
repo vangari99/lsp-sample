@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* --------------------------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
@@ -75,6 +76,47 @@ export function activate(context: ExtensionContext) {
 		vscode.window.showInformationMessage(`Synching JCL process complete...`);
 	});
 
+	const syncFile = vscode.commands.registerCommand('lsp-sample.syncFile', async () => {
+		// This is to sync local file changes to mainframe
+		// call zosmf rest api to update/create the jcls
+		// make sure upon commit a jenkins pipeline is triggered
+		//		A. get the committed file name and use PRO/JCL rest api to validate them
+		
+		// todo - we can do this on the jenkins too..
+		const restApiServices = RestApiServices.getInstance();
+		const zosmfUrl = "rsb3.rocketsoftware.com:11443";
+		const credential: AxiosRequestConfig<any> = 
+		{
+			auth: {
+				username: "ts4447",
+				password: "Benly99@",
+				}
+		};
+		const { activeTextEditor } = vscode.window;
+		if (activeTextEditor) {
+
+			const document = activeTextEditor.document;
+			// save the file..
+			document.save();
+			const text = document.getText();
+			const textToSend = text.replace(/[\\\r\\\n]+/gm, "\n");
+			const uri: vscode.Uri = document.uri!;
+			const uriPathSplitArray = uri.path.split("/");
+
+			let file = uriPathSplitArray[uriPathSplitArray.length-2].concat("(",uriPathSplitArray[uriPathSplitArray.length-1].split(".")[0],")");
+
+			// sync with mainframe
+			const updateOptionsFile = await restApiServices.putRequest(zosmfUrl, "zosmf/restfiles/ds/" + file, textToSend, credential);
+			if (updateOptionsFile.success) {
+				console.log(`'${zosmfUrl}/zosmf/restfiles/ds/${file}' - Update Options file request was successful.`);
+				vscode.window.showInformationMessage(`Synching JCL done for ${file}`);
+			} else {
+				console.log(` '${zosmfUrl}/zosmf/restfiles/ds/${file}' - Update Options file failed with error`);
+				vscode.window.showInformationMessage(`Synching JCL failed for ${file}`);
+			}
+		}
+	});
+
 
 	const serverModule = context.asAbsolutePath(
 		path.join('server', 'out', 'server.js')
@@ -113,7 +155,7 @@ export function activate(context: ExtensionContext) {
 	console.log('client started and starting server');
 	client.start();
 
-	context.subscriptions.push(syncFiles);
+	context.subscriptions.push(syncFiles, syncFile);
 	//subscribe them
 }
 
