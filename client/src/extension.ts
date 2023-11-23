@@ -117,6 +117,33 @@ export function activate(context: ExtensionContext) {
 		}
 	});
 
+	const addScaler = vscode.commands.registerCommand('lsp-sample.addScaler', () => {
+        // Get the active text editor
+        const editor = vscode.window.activeTextEditor;
+
+        if (editor) {
+			const currentContent = editor.document.getText();
+
+			// Create the decorator line
+			const decoratorLine = '----+----1----+----2----+----3----+----4';
+	
+			const decoratorDecorationType = vscode.window.createTextEditorDecorationType({
+				isWholeLine: true,
+				// overviewRulerLane: 
+				before: {
+					contentText: decoratorLine,
+					color: 'rgba(128, 128, 128, 0.8)',
+					margin: '-10 -10 -10 -10', // Adjust margin as needed
+				},
+			});
+			// Get the range for the decorator line
+			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
+
+			// Add the decoration to the editor
+			editor.setDecorations(decoratorDecorationType, [{ range }]);
+		}
+	});
+
 
 	const serverModule = context.asAbsolutePath(
 		path.join('server', 'out', 'server.js')
@@ -155,7 +182,7 @@ export function activate(context: ExtensionContext) {
 	console.log('client started and starting server');
 	client.start();
 
-	context.subscriptions.push(syncFiles, syncFile);
+	context.subscriptions.push(syncFiles, syncFile, addScaler);
 	//subscribe them
 }
 

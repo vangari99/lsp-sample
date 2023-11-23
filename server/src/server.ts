@@ -14,7 +14,8 @@ import {
 	CompletionItemKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	integer
 } from 'vscode-languageserver/node';
 
 import {
@@ -134,8 +135,181 @@ documents.onDidClose(e => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	console.log('validate the JCL locally..');
-	// validateTextDocument(change.document);
+	validateJCL(change.document);
 });
+
+
+async function validateJCL(textDocument: TextDocument): Promise<void> {
+	// The validator creates diagnostics for all uppercase words length 2 and more
+	const jclText = textDocument.getText();
+	const jclLines = jclText.split("\r\n");
+	let lineNumber = 0;
+	const diagnostics: Diagnostic[] = [];
+
+	for (let i = 0; i < jclLines.length; i++) {
+		lineNumber++;
+
+		if (jclLines[i].includes("DSN=")) {
+			console.log(`i -${i} lineNumber - ${lineNumber} - line - ${jclLines[i]}`);
+			//validate DSN
+			//todo - check why line number issue..
+			const ddDiagnostics = validateDD(textDocument, jclLines[i], lineNumber-1);
+			if (ddDiagnostics) {
+				ddDiagnostics.forEach(diagnostic => {
+					// update jclDiagnostics
+					diagnostics.push(diagnostic);
+				});
+			}
+		}
+
+		if (jclLines[i].includes("DISP=")) {
+			console.log(`i -${i} lineNumber - ${lineNumber} - line - ${jclLines[i]}`);
+			//validate DISP
+			//todo - check why line number issue..
+			const dispDiagnostics = validateDISP(textDocument, jclLines[i], lineNumber-1);
+			if (dispDiagnostics) {
+				dispDiagnostics.forEach(diagnostic => {
+					// update jclDiagnostics
+					diagnostics.push(diagnostic);
+				});
+			}
+		}
+	
+	}
+
+	// Send the computed diagnostics to VSCode.
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+}
+
+function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: integer): Diagnostic[] {
+	let dsnLiteral = "";
+	const diagnostics: Diagnostic[] = [];
+	const ddPattern = /DSN=([^,\s]+)/;
+	const digits = /^\d/;
+	const dsnPattern = /^[A-Za-z0-9@#\\$-]+$/;
+	
+	const matches: string[]|null = jclLine.match(ddPattern);
+	if (matches) {
+		dsnLiteral = matches[1];
+	}
+
+	if (dsnLiteral.length <= 0 || dsnLiteral.length > 44) {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				start: {line: lineNumber, character: jclLine.indexOf("DSN=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DSN=")+4+dsnLiteral.length }
+			},
+			message: `Invalid DSN length, allowed length (1 - 44).`
+		};
+		diagnostics.push(diagnostic);
+		return diagnostics;
+	}
+
+	const dsnHLQs: string[] = dsnLiteral.split(".");
+	dsnHLQs.forEach(hlq => {
+		if (hlq.length < 1 || hlq.length > 8 || digits.test(hlq) || 
+			hlq.charAt(0) === '-' || !(dsnPattern.test(hlq))) {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Error,
+				range: {
+					start: {line: lineNumber, character: jclLine.indexOf("DSN=") },
+					end: {line: lineNumber, character: jclLine.indexOf(hlq)+hlq.length }
+				},
+				message: `Invalid DSN qualifier, check lenght and allowed chars (A-Z, 0-9, @#$).`
+			};
+			diagnostics.push(diagnostic);
+		}
+	});
+
+	return diagnostics;
+}
+
+function validateDISP(textDocument: TextDocument, jclLine: string, lineNumber: integer): Diagnostic[] {
+	let dispLiteral = "", dispStatus="", dispNormal="", dispAbnormal="";
+	let dispPattern ;
+	const diagnostics: Diagnostic[] = [];
+	if (jclLine.includes("DISP=(")) {
+		dispPattern = /DISP=\(([\S]+)\)/;
+	} else  {
+		dispPattern = /DISP=([^,\s]+)/;
+	}
+	
+	const matches: string[]|null = jclLine.match(dispPattern);
+	if (matches) {
+		dispLiteral = matches[1];
+	}
+
+	if (dispLiteral.includes(",")) {
+		const dispVars = dispLiteral.split(",");
+		dispStatus = dispVars[0];
+		dispNormal = dispVars[1];
+		dispAbnormal = dispVars[2];
+	} else {
+		dispStatus = dispLiteral; 
+	}
+
+	if ((dispStatus.length > 1 && dispStatus !== "NEW" && dispStatus !== "OLD" && dispStatus !== "SHR" && dispStatus !== "MOD" )) {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+5+dispLiteral.length }
+			},
+			message: `Invalid DISP 1.`
+		};
+		diagnostics.push(diagnostic);
+	}
+
+	if ((dispNormal?.length > 1 && dispNormal !== "DELETE" && dispNormal !== "KEEP" && dispNormal !== "PASS" && dispNormal !== "CATLG" && dispNormal != "UNCATLG" )) {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+6+dispLiteral.length }
+			},
+			message: `Invalid DISP 2.`
+		};
+		diagnostics.push(diagnostic);
+	}
+
+	if ((dispAbnormal?.length > 1 && dispAbnormal !== "DELETE" && dispAbnormal !== "KEEP" && dispAbnormal !== "CATLG" && dispAbnormal !== "UNCATLG" )) {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+6+dispLiteral.length }
+			},
+			message: `Invalid DISP 3.`
+		};
+		diagnostics.push(diagnostic);
+	}
+
+	return diagnostics;
+}
+
+function validateStepLib(textDocument: TextDocument, tokens: string[], lineNumber: integer): Diagnostic[] {
+	const diagnostics: Diagnostic[] = [];
+	const steplibLiteral = tokens[1];
+	const ddLiteral = tokens[2];
+	const dsnLiteral = tokens[3].split(",")[0];
+	const dispLiteral = tokens[3].split(",")[1];
+
+	if (dsnLiteral.length > 10) {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Warning,
+			range: {
+				// start: {line: lineNumber, character: }
+				start: textDocument.positionAt(textDocument.getText().indexOf(dsnLiteral)),
+				end: textDocument.positionAt((textDocument.getText().indexOf(dsnLiteral)+dsnLiteral.length))
+			},
+			message: `STEPLIB DSN length exceeds max allowed length of 44.`,
+			source: 'ex'
+		};
+		diagnostics.push(diagnostic);
+	}
+	return diagnostics;
+}
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
