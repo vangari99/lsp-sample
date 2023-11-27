@@ -201,6 +201,10 @@ const autocomp: AutoComp[] = [
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+const digits = new RegExp(/^\d/);   //starts with digits
+const hasAllDigits = new RegExp(/^\d+$/);
+const dsnPattern = new RegExp("^[A-Za-z0-9@#\\$-]+$");
+
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -406,11 +410,41 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 	for (let i = 0; i < jclLines.length; i++) {
 		lineNumber++;
 
+		if (jclLines[i].includes("PGM=")) {
+			const pgmPattern = /PGM=([^,\s]+)/;
+			const matches: string[] | null = jclLines[i].match(pgmPattern);
+			if (matches) {
+				const pgmValue = matches[1];
+				const pgmDiagnostics = validateMemberName(jclLines[i], pgmValue, lineNumber - 1);
+				if (pgmDiagnostics) {
+					pgmDiagnostics.forEach(diagnostic => {
+						// update jclDiagnostics
+						diagnostics.push(diagnostic);
+					});
+				}
+			}
+		}
+
+		if (jclLines[i].includes("REGION=")) {
+			const regionPattern = /REGION=([^,\s]+)/;
+			const matches: string[] | null = jclLines[i].match(regionPattern);
+			if (matches) {
+				const regionValue = matches[1];
+				const regionDiagnostics = validateRegion(jclLines[i], regionValue, lineNumber - 1);
+				if (regionDiagnostics) {
+					regionDiagnostics.forEach(diagnostic => {
+						// update jclDiagnostics
+						diagnostics.push(diagnostic);
+					});
+				}
+			}
+		}
+
 		if (jclLines[i].includes("DSN=")) {
 			console.log(`i -${i} lineNumber - ${lineNumber} - line - ${jclLines[i]}`);
 			//validate DSN
 			//todo - check why line number issue..
-			const ddDiagnostics = validateDD(textDocument, jclLines[i], lineNumber-1);
+			const ddDiagnostics = validateDD(textDocument, jclLines[i], lineNumber - 1);
 			if (ddDiagnostics) {
 				ddDiagnostics.forEach(diagnostic => {
 					// update jclDiagnostics
@@ -423,7 +457,7 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 			console.log(`i -${i} lineNumber - ${lineNumber} - line - ${jclLines[i]}`);
 			//validate DISP
 			//todo - check why line number issue..
-			const dispDiagnostics = validateDISP(textDocument, jclLines[i], lineNumber-1);
+			const dispDiagnostics = validateDISP(textDocument, jclLines[i], lineNumber - 1);
 			if (dispDiagnostics) {
 				dispDiagnostics.forEach(diagnostic => {
 					// update jclDiagnostics
@@ -431,21 +465,78 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 				});
 			}
 		}
-	
+
 	}
 
 	// Send the computed diagnostics to VSCode.
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
+function validateMemberName(jclLine: string, text: string, lineNumber: number) {
+	const name: string = text.trim();
+	const diagnostics: Diagnostic[] = [];
+	let msg: string = '';
+	if (name !== '') {
+		if (name.length > 8) {
+			msg = 'PGM name is limited to 8 characters in length.';
+		} else if (digits.test(name.charAt(0)) || name.charAt(0) === '-') {
+			msg = 'Invalid first character in PGM name.';
+		} else if (!dsnPattern.test(name)) {
+			msg = 'Invalid character in PGM value.';
+		}
+	} else {
+		msg = 'No value for PGM provided.';
+	}
+	if (msg !== '') {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				// start: {line: lineNumber, character: }
+				//replace pgm= with length of whichever parm to make the method generic by passing in function arguments
+				start: { line: lineNumber, character: jclLine.indexOf("PGM=") },
+				end: { line: lineNumber, character: jclLine.indexOf("PGM=") + 4 + name.length }
+			},
+			message: msg
+		};
+		diagnostics.push(diagnostic);
+	}
+	return diagnostics;
+}
+
+function validateRegion(jclLine: string, value: string, lineNumber: number) {
+	const diagnostics: Diagnostic[] = [];
+	let msg = '';
+	const numericVal = value.slice(0, value.length - 1);
+	if (value.length > 5) {
+		msg = "Invalid REGION parm length.";
+	} else if (!hasAllDigits.test(numericVal)) {
+		msg = "Non-digit value provided in REGION size.";
+	} else if (!value.endsWith('K') && !value.endsWith('M')) {
+		msg = "REGION size must only be specified in Megabytes(M) or Kilobytes(K).";
+	}
+
+	if (msg !== '') {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				// start: {line: lineNumber, character: }
+				start: { line: lineNumber, character: jclLine.indexOf("REGION") },
+				end: { line: lineNumber, character: jclLine.indexOf("REGION=") + 7 + value.length }
+			},
+			message: msg
+		};
+		diagnostics.push(diagnostic);
+	}
+	return diagnostics;
+
+}
+
 function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: integer): Diagnostic[] {
 	let dsnLiteral = "";
 	const diagnostics: Diagnostic[] = [];
 	const ddPattern = /DSN=([^,\s]+)/;
-	const digits = /^\d/;
-	const dsnPattern = /^[A-Za-z0-9@#\\$-]+$/;
-	
-	const matches: string[]|null = jclLine.match(ddPattern);
+
+	const matches: string[] | null = jclLine.match(ddPattern);
 	if (matches) {
 		dsnLiteral = matches[1];
 	}
@@ -454,8 +545,8 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: {line: lineNumber, character: jclLine.indexOf("DSN=") },
-				end: {line: lineNumber, character: jclLine.indexOf("DSN=")+4+dsnLiteral.length }
+				start: { line: lineNumber, character: jclLine.indexOf("DSN=") },
+				end: { line: lineNumber, character: jclLine.indexOf("DSN=") + 4 + dsnLiteral.length }
 			},
 			message: `Invalid DSN length, allowed length (1 - 44).`
 		};
@@ -465,15 +556,15 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 
 	const dsnHLQs: string[] = dsnLiteral.split(".");
 	dsnHLQs.forEach(hlq => {
-		if (hlq.length < 1 || hlq.length > 8 || digits.test(hlq) || 
+		if (hlq.length < 1 || hlq.length > 8 || digits.test(hlq) ||
 			hlq.charAt(0) === '-' || !(dsnPattern.test(hlq))) {
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Error,
 				range: {
-					start: {line: lineNumber, character: jclLine.indexOf("DSN=") },
-					end: {line: lineNumber, character: jclLine.indexOf(hlq)+hlq.length }
+					start: { line: lineNumber, character: jclLine.indexOf("DSN=") },
+					end: { line: lineNumber, character: jclLine.indexOf(hlq) + hlq.length }
 				},
-				message: `Invalid DSN qualifier, check lenght and allowed chars (A-Z, 0-9, @#$).`
+				message: `Invalid DSN qualifier, check length and allowed chars (A-Z, 0-9, @#$).`
 			};
 			diagnostics.push(diagnostic);
 		}
@@ -483,16 +574,16 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 }
 
 function validateDISP(textDocument: TextDocument, jclLine: string, lineNumber: integer): Diagnostic[] {
-	let dispLiteral = "", dispStatus="", dispNormal="", dispAbnormal="";
-	let dispPattern ;
+	let dispLiteral = "", dispStatus = "", dispNormal = "", dispAbnormal = "";
+	let dispPattern;
 	const diagnostics: Diagnostic[] = [];
 	if (jclLine.includes("DISP=(")) {
 		dispPattern = /DISP=\(([\S]+)\)/;
-	} else  {
+	} else {
 		dispPattern = /DISP=([^,\s]+)/;
 	}
-	
-	const matches: string[]|null = jclLine.match(dispPattern);
+
+	const matches: string[] | null = jclLine.match(dispPattern);
 	if (matches) {
 		dispLiteral = matches[1];
 	}
@@ -503,39 +594,39 @@ function validateDISP(textDocument: TextDocument, jclLine: string, lineNumber: i
 		dispNormal = dispVars[1];
 		dispAbnormal = dispVars[2];
 	} else {
-		dispStatus = dispLiteral; 
+		dispStatus = dispLiteral;
 	}
 
-	if ((dispStatus.length > 1 && dispStatus !== "NEW" && dispStatus !== "OLD" && dispStatus !== "SHR" && dispStatus !== "MOD" )) {
+	if ((dispStatus.length > 1 && dispStatus !== "NEW" && dispStatus !== "OLD" && dispStatus !== "SHR" && dispStatus !== "MOD")) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
-				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+5+dispLiteral.length }
+				start: { line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: { line: lineNumber, character: jclLine.indexOf("DISP=") + 5 + dispLiteral.length }
 			},
 			message: `Invalid DISP 1.`
 		};
 		diagnostics.push(diagnostic);
 	}
 
-	if ((dispNormal?.length > 1 && dispNormal !== "DELETE" && dispNormal !== "KEEP" && dispNormal !== "PASS" && dispNormal !== "CATLG" && dispNormal != "UNCATLG" )) {
+	if ((dispNormal?.length > 1 && dispNormal !== "DELETE" && dispNormal !== "KEEP" && dispNormal !== "PASS" && dispNormal !== "CATLG" && dispNormal != "UNCATLG")) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
-				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+6+dispLiteral.length }
+				start: { line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: { line: lineNumber, character: jclLine.indexOf("DISP=") + 6 + dispLiteral.length }
 			},
 			message: `Invalid DISP 2.`
 		};
 		diagnostics.push(diagnostic);
 	}
 
-	if ((dispAbnormal?.length > 1 && dispAbnormal !== "DELETE" && dispAbnormal !== "KEEP" && dispAbnormal !== "CATLG" && dispAbnormal !== "UNCATLG" )) {
+	if ((dispAbnormal?.length > 1 && dispAbnormal !== "DELETE" && dispAbnormal !== "KEEP" && dispAbnormal !== "CATLG" && dispAbnormal !== "UNCATLG")) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
-				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+6+dispLiteral.length }
+				start: { line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: { line: lineNumber, character: jclLine.indexOf("DISP=") + 6 + dispLiteral.length }
 			},
 			message: `Invalid DISP 3.`
 		};
@@ -558,7 +649,7 @@ function validateStepLib(textDocument: TextDocument, tokens: string[], lineNumbe
 			range: {
 				// start: {line: lineNumber, character: }
 				start: textDocument.positionAt(textDocument.getText().indexOf(dsnLiteral)),
-				end: textDocument.positionAt((textDocument.getText().indexOf(dsnLiteral)+dsnLiteral.length))
+				end: textDocument.positionAt((textDocument.getText().indexOf(dsnLiteral) + dsnLiteral.length))
 			},
 			message: `STEPLIB DSN length exceeds max allowed length of 44.`,
 			source: 'ex'
