@@ -15,7 +15,9 @@ import {
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
 	InitializeResult,
-	integer
+	integer,
+	Hover,
+	MarkupKind
 } from 'vscode-languageserver/node';
 
 import {
@@ -193,6 +195,11 @@ const autocomp: AutoComp[] = [
 		label: 'PGM=IDCAMS',
 		kind: CompletionItemKind.Text,
 		data: 31
+	},
+	{
+		label: '        SET HLQ=<>',
+		kind: CompletionItemKind.Text,
+		data: 32
 	}
 
 ];
@@ -205,6 +212,9 @@ const digits = new RegExp(/^\d/);   //starts with digits
 const hasAllDigits = new RegExp(/^\d+$/);
 const dsnPattern = new RegExp("^[A-Za-z0-9@#\\$-]+$");
 
+// const DDArray: string[] = [];
+const JCLLines: string[] = [];
+const HlqSETMap = new Map <string, string>();
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -229,7 +239,8 @@ connection.onInitialize((params: InitializeParams) => {
 			// Tell the client that this server supports code completion.
 			completionProvider: {
 				resolveProvider: true
-			}
+			},
+			hoverProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -348,67 +359,39 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 	let lineNumber = 0;
 	
 	const diagnostics: Diagnostic[] = [];
-	lines.forEach(line => {
-		let index = 0;
-		console.log("line: " + line);
-		// Add Parms below to save the Values as autosuggestions
-		
-		index = line.indexOf("DSN=");
-		if (index > 0) {
-			addVariabletoSuggestion("DSN=", line, index);
-		}
-		index =line.indexOf("DISP=");
-		if (index > 0) {
-			addVariabletoSuggestion("DISP=", line, index);
-		}
-		index = line.indexOf("PGM=");
-		if (index > 0) {
-			addVariabletoSuggestion("PGM=", line, index);
-		}
-		index = line.indexOf("NOTIFY=");
-		if (index > 0) {
-			addVariabletoSuggestion("NOTIFY=", line, index);
-
-		}
-		index = line.indexOf("TIME=");
-		if (index > 0) {
-			addVariabletoSuggestion("TIME=", line, index);
-
-		}
-		index = line.indexOf("SET=");
-		if (index > 0){
-			addVariabletoSuggestion("SET=",line,index);
-		}
-		index = line.indexOf("SPACE=");
-		if (index > 0){
-			addVariabletoSuggestion("SPACE=",line,index);
-		}
-		index = line.indexOf("UNIT=");
-		if (index > 0){
-			addVariabletoSuggestion("UNIT=",line,index);
-		}
-		index = line.indexOf("DSNAME=");
-		if (index > 0){
-			addVariabletoSuggestion("DSNAME=",line,index);
-		}
-		index = line.indexOf("SYSOUT=");
-		if (index > 0){
-			addVariabletoSuggestion("SYSOUT=",line,index);
-		}
-		index = line.indexOf("COND=");
-		if (index > 0){
-			addVariabletoSuggestion("COND=",line,index);
-		}
-		index = line.indexOf("PARM=");
-		if (index > 0){
-			addVariabletoSuggestion("PARM=",line,index);
-		}
-
-	});
-
+	JCLLines.length = 0;
+	// DDArray.length = 0;
 
 	for (let i = 0; i < jclLines.length; i++) {
 		lineNumber++;
+		JCLLines.push(jclLines[i]);
+
+		// call addVariabletoSuggestion
+		checkForAddVariabletoSuggestion(jclLines[i]);
+
+		// keep track of SET stmts and store its key-values pairs for hover functionality.
+		if (jclLines[i].includes(" SET ")) {
+			const match = jclLines[i].match(/\bSET\s+(\w+)\s*=\s*'([^']+)'/i);
+			if (match) {
+				const keyword = match[1];
+				const value = match[2];
+				HlqSETMap.set(keyword, value);
+			}
+		}
+
+		// error if continuation does start within col 16
+		if (jclLines[i].startsWith("//              ") && 
+			jclLines[i-1].includes(", ")) {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Error,
+				range: {
+					start: {line: lineNumber-1, character: 1 },
+					end: {line: lineNumber-1, character: jclLines[i].length }
+				},
+				message: `Expected continuation not received.`
+			};
+			diagnostics.push(diagnostic);
+		}
 
 		if (jclLines[i].includes("PGM=")) {
 			const pgmPattern = /PGM=([^,\s]+)/;
@@ -472,6 +455,96 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
+
+connection.onHover(
+	(_textDocumentPosition: TextDocumentPositionParams): Hover => {
+		const currentLine = JCLLines[_textDocumentPosition.position.line];
+		let startIdx = _textDocumentPosition.position.character;
+		let endIdx = startIdx;
+		let markdown = { contents: {kind: MarkupKind.Markdown, value: "" }};
+		if (currentLine[startIdx] === '&' || currentLine[startIdx-1] === '&') {
+			while ((currentLine[endIdx] !== ' ') && (currentLine[endIdx] !== '.') && (currentLine[endIdx] !== ',')) {
+				endIdx++;
+			}
+			if (currentLine[startIdx-1] === '&')
+				startIdx--;
+
+			console.log(`start - ${startIdx} end - ${endIdx}`);
+			console.log(`sub str - ${currentLine.substring(startIdx, endIdx)}`);
+			// now get a HLQ1 value from Map
+			let HLQValue: string | undefined = "";
+			if (HlqSETMap.size > 0)
+				HLQValue = HlqSETMap.get(currentLine.substring(startIdx+1, endIdx));
+
+			if (!HLQValue) {
+				HLQValue = "";
+			}
+
+			markdown = { contents: {kind: MarkupKind.Markdown, value: HLQValue }} ;
+		}
+
+		return markdown;
+
+	}
+);
+
+
+function checkForAddVariabletoSuggestion(line: string) {
+	let index = 0;
+		console.log("line: " + line);
+		// Add Parms below to save the Values as autosuggestions
+		
+		index = line.indexOf("DSN=");
+		if (index > 0) {
+			addVariabletoSuggestion("DSN=", line, index);
+		}
+		index =line.indexOf("DISP=");
+		if (index > 0) {
+			addVariabletoSuggestion("DISP=", line, index);
+		}
+		index = line.indexOf("PGM=");
+		if (index > 0) {
+			addVariabletoSuggestion("PGM=", line, index);
+		}
+		index = line.indexOf("NOTIFY=");
+		if (index > 0) {
+			addVariabletoSuggestion("NOTIFY=", line, index);
+
+		}
+		index = line.indexOf("TIME=");
+		if (index > 0) {
+			addVariabletoSuggestion("TIME=", line, index);
+
+		}
+		index = line.indexOf("SET=");
+		if (index > 0){
+			addVariabletoSuggestion("SET=",line,index);
+		}
+		index = line.indexOf("SPACE=");
+		if (index > 0){
+			addVariabletoSuggestion("SPACE=",line,index);
+		}
+		index = line.indexOf("UNIT=");
+		if (index > 0){
+			addVariabletoSuggestion("UNIT=",line,index);
+		}
+		index = line.indexOf("DSNAME=");
+		if (index > 0){
+			addVariabletoSuggestion("DSNAME=",line,index);
+		}
+		index = line.indexOf("SYSOUT=");
+		if (index > 0){
+			addVariabletoSuggestion("SYSOUT=",line,index);
+		}
+		index = line.indexOf("COND=");
+		if (index > 0){
+			addVariabletoSuggestion("COND=",line,index);
+		}
+		index = line.indexOf("PARM=");
+		if (index > 0){
+			addVariabletoSuggestion("PARM=",line,index);
+		}
+}
 function validateMemberName(jclLine: string, text: string, lineNumber: number) {
 	const name: string = text.trim();
 	const diagnostics: Diagnostic[] = [];
@@ -534,19 +607,22 @@ function validateRegion(jclLine: string, value: string, lineNumber: number) {
 function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: integer): Diagnostic[] {
 	let dsnLiteral = "";
 	const diagnostics: Diagnostic[] = [];
-	const ddPattern = /DSN=([^,\s]+)/;
+	const ddPattern = /DSN=([^,(\s]+)/;
+	const digits = /^\d/;
+	const dsnPattern = /^[A-Za-z0-9@#\\$-]+$/;
 
-	const matches: string[] | null = jclLine.match(ddPattern);
+	const matches: string[]|null = jclLine.match(ddPattern);
 	if (matches) {
 		dsnLiteral = matches[1];
+		// DDArray.push(dsnLiteral);
 	}
 
 	if (dsnLiteral.length <= 0 || dsnLiteral.length > 44) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: lineNumber, character: jclLine.indexOf("DSN=") },
-				end: { line: lineNumber, character: jclLine.indexOf("DSN=") + 4 + dsnLiteral.length }
+				start: {line: lineNumber, character: jclLine.indexOf("DSN=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DSN=")+4+dsnLiteral.length }
 			},
 			message: `Invalid DSN length, allowed length (1 - 44).`
 		};
@@ -556,15 +632,18 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 
 	const dsnHLQs: string[] = dsnLiteral.split(".");
 	dsnHLQs.forEach(hlq => {
-		if (hlq.length < 1 || hlq.length > 8 || digits.test(hlq) ||
+		if (hlq.startsWith("&") || hlq.length === 0) {
+// 
+		}
+		else if (hlq.length > 8 || digits.test(hlq) || 
 			hlq.charAt(0) === '-' || !(dsnPattern.test(hlq))) {
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Error,
 				range: {
-					start: { line: lineNumber, character: jclLine.indexOf("DSN=") },
-					end: { line: lineNumber, character: jclLine.indexOf(hlq) + hlq.length }
+					start: {line: lineNumber, character: jclLine.indexOf("DSN=") },
+					end: {line: lineNumber, character: jclLine.indexOf(hlq)+hlq.length }
 				},
-				message: `Invalid DSN qualifier, check length and allowed chars (A-Z, 0-9, @#$).`
+				message: `Invalid DSN qualifier, check lenght and allowed chars (A-Z, 0-9, @#$).`
 			};
 			diagnostics.push(diagnostic);
 		}
@@ -574,18 +653,20 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 }
 
 function validateDISP(textDocument: TextDocument, jclLine: string, lineNumber: integer): Diagnostic[] {
-	let dispLiteral = "", dispStatus = "", dispNormal = "", dispAbnormal = "";
-	let dispPattern;
+	let dispLiteral = "", dispStatus="", dispNormal="", dispAbnormal="";
+	let dispPattern ;
 	const diagnostics: Diagnostic[] = [];
 	if (jclLine.includes("DISP=(")) {
-		dispPattern = /DISP=\(([\S]+)\)/;
-	} else {
+		// dispPattern = /DISP=\(([\S]+)\)/;
+		const startIndex = jclLine.indexOf("DISP=(");
+		const endIndex = jclLine.indexOf(")", startIndex);
+		dispLiteral = jclLine.substring(startIndex+6,endIndex);
+	} else  {
 		dispPattern = /DISP=([^,\s]+)/;
-	}
-
-	const matches: string[] | null = jclLine.match(dispPattern);
+		const matches: string[]|null = jclLine.match(dispPattern);
 	if (matches) {
 		dispLiteral = matches[1];
+	}
 	}
 
 	if (dispLiteral.includes(",")) {
@@ -597,38 +678,38 @@ function validateDISP(textDocument: TextDocument, jclLine: string, lineNumber: i
 		dispStatus = dispLiteral;
 	}
 
-	if ((dispStatus.length > 1 && dispStatus !== "NEW" && dispStatus !== "OLD" && dispStatus !== "SHR" && dispStatus !== "MOD")) {
+	if ((dispStatus.length > 1 && dispStatus !== "NEW" && dispStatus !== "OLD" && dispStatus !== "SHR" && dispStatus !== "MOD" )) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: lineNumber, character: jclLine.indexOf("DISP=") },
-				end: { line: lineNumber, character: jclLine.indexOf("DISP=") + 5 + dispLiteral.length }
+				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+5+dispLiteral.length }
 			},
-			message: `Invalid DISP 1.`
+			message: `Invalid DISP status value.`
 		};
 		diagnostics.push(diagnostic);
 	}
 
-	if ((dispNormal?.length > 1 && dispNormal !== "DELETE" && dispNormal !== "KEEP" && dispNormal !== "PASS" && dispNormal !== "CATLG" && dispNormal != "UNCATLG")) {
+	if ((dispNormal?.length > 1 && dispNormal !== "DELETE" && dispNormal !== "KEEP" && dispNormal !== "PASS" && dispNormal !== "CATLG" && dispNormal != "UNCATLG" )) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: lineNumber, character: jclLine.indexOf("DISP=") },
-				end: { line: lineNumber, character: jclLine.indexOf("DISP=") + 6 + dispLiteral.length }
+				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+6+dispLiteral.length }
 			},
-			message: `Invalid DISP 2.`
+			message: `Invalid normal temination DISP value.`
 		};
 		diagnostics.push(diagnostic);
 	}
 
-	if ((dispAbnormal?.length > 1 && dispAbnormal !== "DELETE" && dispAbnormal !== "KEEP" && dispAbnormal !== "CATLG" && dispAbnormal !== "UNCATLG")) {
+	if ((dispAbnormal?.length > 1 && dispAbnormal !== "DELETE" && dispAbnormal !== "KEEP" && dispAbnormal !== "CATLG" && dispAbnormal !== "UNCATLG" )) {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: lineNumber, character: jclLine.indexOf("DISP=") },
-				end: { line: lineNumber, character: jclLine.indexOf("DISP=") + 6 + dispLiteral.length }
+				start: {line: lineNumber, character: jclLine.indexOf("DISP=") },
+				end: {line: lineNumber, character: jclLine.indexOf("DISP=")+6+dispLiteral.length }
 			},
-			message: `Invalid DISP 3.`
+			message: `Invalid abnormal temination DISP value.`
 		};
 		diagnostics.push(diagnostic);
 	}
@@ -717,6 +798,22 @@ connection.onCompletion(
 		// The pass parameter contains the position of the text document in
 		// which code complete got requested. For the example we ignore this
 		// info and always provide the same completion items.
+
+		// //get the current word
+		// // const text = _textDocumentPosition.textDocument.uri;
+		// const currentLine = JCLLines[_textDocumentPosition.position.line];
+		// // const prevLine = JCLLines[_textDocumentPosition.position.line-1];
+		// // const nextLine = JCLLines[_textDocumentPosition.position.line+1];
+		// if (currentLine.includes("DD") && !currentLine.includes("DISP")){
+		// 	const returnDDArray: CompletionItem[] = [];
+		// 	DDArray.forEach(ddname => {
+		// 		returnDDArray.push({
+		// 			label: ddname
+		// 		});
+		// 	});
+		// 	return returnDDArray;
+		// }
+
 		if (!returnedOnCompletion) {
 			if (autoSuggest.length > 0) {
 				const autoSuggest1 = removeDuplicates(autoSuggest);
