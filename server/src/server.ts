@@ -200,6 +200,41 @@ const autocomp: AutoComp[] = [
 		label: '        SET HLQ=<>',
 		kind: CompletionItemKind.Text,
 		data: 32
+	},
+	{
+		label: 'NEW      DD  DSN=TS4447.TEST.SUR6,\n//             DISP=(NEW,CATLG,DELETE),\n//             SPACE=(TRK,(10,10),RLSE),UNIT=SYSDA,\n//             DCB=(DSORG=PS,RECFM=FB,LRECL=80,BLKSIZE=800)',
+		kind: CompletionItemKind.Text,
+		data: 33
+	},
+	{
+		label: 'STEPnn   EXEC  PGM=pgmname',
+		kind: CompletionItemKind.Text,
+		data: 34
+	},
+	{
+		label: 'SORTIN   DD DSN=TS4447.SORT.IN,DISP=SHR',
+		kind: CompletionItemKind.Text,
+		data: 35
+	},
+	{
+		label: 'SYSPRINT DD SYSOUT=*',
+		kind: CompletionItemKind.Text,
+		data: 36
+	},
+	{
+		label: 'SORTOUT  DD SYSOUT=*',
+		kind: CompletionItemKind.Text,
+		data: 37
+	},
+	{
+		label: 'SYSOUT   DD SYSOUT=*',
+		kind: CompletionItemKind.Text,
+		data: 38
+	},
+	{
+		label: 'SYSIN    DD *\n  SORT FIELDS=COPY\n/*',
+		kind: CompletionItemKind.Text,
+		data: 39
 	}
 
 ];
@@ -215,6 +250,21 @@ const dsnPattern = new RegExp("^[A-Za-z0-9@#\\$-]+$");
 // const DDArray: string[] = [];
 const JCLLines: string[] = [];
 const HlqSETMap = new Map <string, string>();
+
+
+// The example settings
+interface ExampleSettings {
+	maxNumberOfProblems: number;
+}
+
+// The global settings, used when the `workspace/configuration` request is not supported by the client.
+// Please note that this is not the case when using this server with the client provided in this example
+// but could happen with other clients.
+const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
+let globalSettings: ExampleSettings = defaultSettings;
+
+// Cache the settings of all open documents
+const documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -265,19 +315,6 @@ connection.onInitialized(() => {
 	}
 });
 
-// The example settings
-interface ExampleSettings {
-	maxNumberOfProblems: number;
-}
-
-// The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
-const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
-let globalSettings: ExampleSettings = defaultSettings;
-
-// Cache the settings of all open documents
-const documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
 connection.onDidChangeConfiguration(change => {
 	if (hasConfigurationCapability) {
@@ -293,51 +330,74 @@ connection.onDidChangeConfiguration(change => {
 	documents.all().forEach(validateTextDocument);
 });
 
-function addVariabletoSuggestion(keyword: string, line: string, index: number) {
 
-	// const index: number = line.indexOf(keyword);
-	console.log(index);
-	if (index > 0) {
-		// const lastindex = line.substring(index+4,80).lastIndexOf(',');
-		const lastcommaindex = line.indexOf(",", index);
-		const lastspaceindex = line.indexOf(" ", index);
-		let autosugvariable = '';
-		if (lastcommaindex < lastspaceindex && lastcommaindex > 0) {
-			autosugvariable = keyword + line.substring(index + keyword.length, lastcommaindex);
-		} else if (lastspaceindex > 0) {
-			autosugvariable = keyword + line.substring(index + keyword.length, lastspaceindex);
+connection.onDidChangeWatchedFiles(_change => {
+	// Monitored files have change in VSCode
+	console.log('We received an file change event');
+});
+
+// This handler provides the initial list of the completion items.
+connection.onCompletion(
+	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+		// The pass parameter contains the position of the text document in
+		// which code complete got requested. For the example we ignore this
+		// info and always provide the same completion items.
+
+		// //get the current word
+		// // const text = _textDocumentPosition.textDocument.uri;
+		// const currentLine = JCLLines[_textDocumentPosition.position.line];
+		// // const prevLine = JCLLines[_textDocumentPosition.position.line-1];
+		// // const nextLine = JCLLines[_textDocumentPosition.position.line+1];
+		// if (currentLine.includes("DD") && !currentLine.includes("DISP")){
+		// 	const returnDDArray: CompletionItem[] = [];
+		// 	DDArray.forEach(ddname => {
+		// 		returnDDArray.push({
+		// 			label: ddname
+		// 		});
+		// 	});
+		// 	return returnDDArray;
+		// }
+
+		if (!returnedOnCompletion) {
+			if (autoSuggest.length > 0) {
+				const autoSuggest1 = removeDuplicates(autoSuggest);
+				for (let i = 0; i < autoSuggest1.length; i++) {
+					returnedOnCompletion = true;
+					autocomp.push({
+						label: autoSuggest1[i],
+						kind: CompletionItemKind.Text,
+						data: autocomp.length + i
+					});
+				}
+			}
+
 		}
-		console.log(autosugvariable);
-		if (autosugvariable.length > 0) {
-			autoSuggest.push(autosugvariable);
+		return autocomp;
+	}
+);
+
+// This handler resolves additional information for the item selected in
+// the completion list.
+connection.onCompletionResolve(
+	(item: CompletionItem): CompletionItem => {
+		if (item.data === 1) {
+			item.detail = 'TypeScript details';
+			item.documentation = 'TypeScript documentation';
+		} else if (item.data === 2) {
+			item.detail = 'JavaScript details';
+			item.documentation = 'JavaScript documentation';
 		}
-
+		return item;
 	}
-}
+);
 
-function removeDuplicates(arr: any[]): any[] {
-	return [...new Set(arr)];
-}
-
-function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
-	if (!hasConfigurationCapability) {
-		return Promise.resolve(globalSettings);
-	}
-	let result = documentSettings.get(resource);
-	if (!result) {
-		result = connection.workspace.getConfiguration({
-			scopeUri: resource,
-			section: 'languageServerExample'
-		});
-		documentSettings.set(resource, result);
-	}
-	console.log(`setting from server`);
-	return result;
-}
+// let's validate on open..
+documents.onDidOpen(e => {
+	validateJCL(e.document);
+});
 
 // Only keep settings for open documents
 documents.onDidClose(e => {
-	console.log('doc is closed 2');
 	documentSettings.delete(e.document.uri);
 });
 
@@ -348,6 +408,38 @@ documents.onDidChangeContent(change => {
 	validateJCL(change.document);
 });
 
+
+connection.onHover(
+	(_textDocumentPosition: TextDocumentPositionParams): Hover => {
+		const currentLine = JCLLines[_textDocumentPosition.position.line];
+		let startIdx = _textDocumentPosition.position.character;
+		let endIdx = startIdx;
+		let markdown = { contents: {kind: MarkupKind.Markdown, value: "" }};
+		if (currentLine[startIdx] === '&' || currentLine[startIdx-1] === '&') {
+			while ((currentLine[endIdx] !== ' ') && (currentLine[endIdx] !== '.') && (currentLine[endIdx] !== ',')) {
+				endIdx++;
+			}
+			if (currentLine[startIdx-1] === '&')
+				startIdx--;
+
+			console.log(`start - ${startIdx} end - ${endIdx}`);
+			console.log(`sub str - ${currentLine.substring(startIdx, endIdx)}`);
+			// now get a HLQ1 value from Map
+			let HLQValue: string | undefined = "";
+			if (HlqSETMap.size > 0)
+				HLQValue = HlqSETMap.get(currentLine.substring(startIdx+1, endIdx));
+
+			if (!HLQValue) {
+				HLQValue = "";
+			}
+
+			markdown = { contents: {kind: MarkupKind.Markdown, value: HLQValue }} ;
+		}
+
+		return markdown;
+
+	}
+);
 
 async function validateJCL(textDocument: TextDocument): Promise<void> {
 	// The validator creates diagnostics for all uppercase words length 2 and more
@@ -381,7 +473,7 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 
 		// error if continuation does start within col 16
 		if (jclLines[i].startsWith("//              ") && 
-			jclLines[i-1].includes(", ")) {
+			(jclLines[i-1].includes(", ") || jclLines[i-1].endsWith(","))) {
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Error,
 				range: {
@@ -453,127 +545,6 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 
 	// Send the computed diagnostics to VSCode.
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-}
-
-
-connection.onHover(
-	(_textDocumentPosition: TextDocumentPositionParams): Hover => {
-		const currentLine = JCLLines[_textDocumentPosition.position.line];
-		let startIdx = _textDocumentPosition.position.character;
-		let endIdx = startIdx;
-		let markdown = { contents: {kind: MarkupKind.Markdown, value: "" }};
-		if (currentLine[startIdx] === '&' || currentLine[startIdx-1] === '&') {
-			while ((currentLine[endIdx] !== ' ') && (currentLine[endIdx] !== '.') && (currentLine[endIdx] !== ',')) {
-				endIdx++;
-			}
-			if (currentLine[startIdx-1] === '&')
-				startIdx--;
-
-			console.log(`start - ${startIdx} end - ${endIdx}`);
-			console.log(`sub str - ${currentLine.substring(startIdx, endIdx)}`);
-			// now get a HLQ1 value from Map
-			let HLQValue: string | undefined = "";
-			if (HlqSETMap.size > 0)
-				HLQValue = HlqSETMap.get(currentLine.substring(startIdx+1, endIdx));
-
-			if (!HLQValue) {
-				HLQValue = "";
-			}
-
-			markdown = { contents: {kind: MarkupKind.Markdown, value: HLQValue }} ;
-		}
-
-		return markdown;
-
-	}
-);
-
-
-function checkForAddVariabletoSuggestion(line: string) {
-	let index = 0;
-		console.log("line: " + line);
-		// Add Parms below to save the Values as autosuggestions
-		
-		index = line.indexOf("DSN=");
-		if (index > 0) {
-			addVariabletoSuggestion("DSN=", line, index);
-		}
-		index =line.indexOf("DISP=");
-		if (index > 0) {
-			addVariabletoSuggestion("DISP=", line, index);
-		}
-		index = line.indexOf("PGM=");
-		if (index > 0) {
-			addVariabletoSuggestion("PGM=", line, index);
-		}
-		index = line.indexOf("NOTIFY=");
-		if (index > 0) {
-			addVariabletoSuggestion("NOTIFY=", line, index);
-
-		}
-		index = line.indexOf("TIME=");
-		if (index > 0) {
-			addVariabletoSuggestion("TIME=", line, index);
-
-		}
-		index = line.indexOf("SET=");
-		if (index > 0){
-			addVariabletoSuggestion("SET=",line,index);
-		}
-		index = line.indexOf("SPACE=");
-		if (index > 0){
-			addVariabletoSuggestion("SPACE=",line,index);
-		}
-		index = line.indexOf("UNIT=");
-		if (index > 0){
-			addVariabletoSuggestion("UNIT=",line,index);
-		}
-		index = line.indexOf("DSNAME=");
-		if (index > 0){
-			addVariabletoSuggestion("DSNAME=",line,index);
-		}
-		index = line.indexOf("SYSOUT=");
-		if (index > 0){
-			addVariabletoSuggestion("SYSOUT=",line,index);
-		}
-		index = line.indexOf("COND=");
-		if (index > 0){
-			addVariabletoSuggestion("COND=",line,index);
-		}
-		index = line.indexOf("PARM=");
-		if (index > 0){
-			addVariabletoSuggestion("PARM=",line,index);
-		}
-}
-function validateMemberName(jclLine: string, text: string, lineNumber: number) {
-	const name: string = text.trim();
-	const diagnostics: Diagnostic[] = [];
-	let msg: string = '';
-	if (name !== '') {
-		if (name.length > 8) {
-			msg = 'PGM name is limited to 8 characters in length.';
-		} else if (digits.test(name.charAt(0)) || name.charAt(0) === '-') {
-			msg = 'Invalid first character in PGM name.';
-		} else if (!dsnPattern.test(name)) {
-			msg = 'Invalid character in PGM value.';
-		}
-	} else {
-		msg = 'No value for PGM provided.';
-	}
-	if (msg !== '') {
-		const diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Error,
-			range: {
-				// start: {line: lineNumber, character: }
-				//replace pgm= with length of whichever parm to make the method generic by passing in function arguments
-				start: { line: lineNumber, character: jclLine.indexOf("PGM=") },
-				end: { line: lineNumber, character: jclLine.indexOf("PGM=") + 4 + name.length }
-			},
-			message: msg
-		};
-		diagnostics.push(diagnostic);
-	}
-	return diagnostics;
 }
 
 function validateRegion(jclLine: string, value: string, lineNumber: number) {
@@ -717,23 +688,116 @@ function validateDISP(textDocument: TextDocument, jclLine: string, lineNumber: i
 	return diagnostics;
 }
 
-function validateStepLib(textDocument: TextDocument, tokens: string[], lineNumber: integer): Diagnostic[] {
-	const diagnostics: Diagnostic[] = [];
-	const steplibLiteral = tokens[1];
-	const ddLiteral = tokens[2];
-	const dsnLiteral = tokens[3].split(",")[0];
-	const dispLiteral = tokens[3].split(",")[1];
 
-	if (dsnLiteral.length > 10) {
+
+function removeDuplicates(arr: any[]): any[] {
+	return [...new Set(arr)];
+}
+
+function checkForAddVariabletoSuggestion(line: string) {
+	let index = 0;
+		console.log("line: " + line);
+		// Add Parms below to save the Values as autosuggestions
+		
+		index = line.indexOf("DSN=");
+		if (index > 0) {
+			addVariabletoSuggestion("DSN=", line, index);
+		}
+		index =line.indexOf("DISP=");
+		if (index > 0) {
+			addVariabletoSuggestion("DISP=", line, index);
+		}
+		index = line.indexOf("PGM=");
+		if (index > 0) {
+			addVariabletoSuggestion("PGM=", line, index);
+		}
+		index = line.indexOf("NOTIFY=");
+		if (index > 0) {
+			addVariabletoSuggestion("NOTIFY=", line, index);
+
+		}
+		index = line.indexOf("TIME=");
+		if (index > 0) {
+			addVariabletoSuggestion("TIME=", line, index);
+
+		}
+		index = line.indexOf("SET=");
+		if (index > 0){
+			addVariabletoSuggestion("SET=",line,index);
+		}
+		index = line.indexOf("SPACE=");
+		if (index > 0){
+			addVariabletoSuggestion("SPACE=",line,index);
+		}
+		index = line.indexOf("UNIT=");
+		if (index > 0){
+			addVariabletoSuggestion("UNIT=",line,index);
+		}
+		index = line.indexOf("DSNAME=");
+		if (index > 0){
+			addVariabletoSuggestion("DSNAME=",line,index);
+		}
+		index = line.indexOf("SYSOUT=");
+		if (index > 0){
+			addVariabletoSuggestion("SYSOUT=",line,index);
+		}
+		index = line.indexOf("COND=");
+		if (index > 0){
+			addVariabletoSuggestion("COND=",line,index);
+		}
+		index = line.indexOf("PARM=");
+		if (index > 0){
+			addVariabletoSuggestion("PARM=",line,index);
+		}
+}
+
+function addVariabletoSuggestion(keyword: string, line: string, index: number) {
+
+	// const index: number = line.indexOf(keyword);
+	console.log(index);
+	if (index > 0) {
+		// const lastindex = line.substring(index+4,80).lastIndexOf(',');
+		const lastcommaindex = line.indexOf(",", index);
+		const lastspaceindex = line.indexOf(" ", index);
+		let autosugvariable = '';
+		if (lastcommaindex < lastspaceindex && lastcommaindex > 0) {
+			autosugvariable = keyword + line.substring(index + keyword.length, lastcommaindex);
+		} else if (lastspaceindex > 0) {
+			autosugvariable = keyword + line.substring(index + keyword.length, lastspaceindex);
+		}
+		console.log(autosugvariable);
+		if (autosugvariable.length > 0) {
+			autoSuggest.push(autosugvariable);
+		}
+
+	}
+}
+
+function validateMemberName(jclLine: string, text: string, lineNumber: number) {
+	const name: string = text.trim();
+	const diagnostics: Diagnostic[] = [];
+	let msg: string = '';
+	if (name !== '') {
+		if (name.length > 8) {
+			msg = 'PGM name is limited to 8 characters in length.';
+		} else if (digits.test(name.charAt(0)) || name.charAt(0) === '-') {
+			msg = 'Invalid first character in PGM name.';
+		} else if (!dsnPattern.test(name)) {
+			msg = 'Invalid character in PGM value.';
+		}
+	} else {
+		msg = 'No value for PGM provided.';
+	}
+	if (msg !== '') {
 		const diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Warning,
+			severity: DiagnosticSeverity.Error,
 			range: {
 				// start: {line: lineNumber, character: }
-				start: textDocument.positionAt(textDocument.getText().indexOf(dsnLiteral)),
-				end: textDocument.positionAt((textDocument.getText().indexOf(dsnLiteral) + dsnLiteral.length))
+				//replace pgm= with length of whichever parm to make the method generic by passing in function arguments
+				start: { line: lineNumber, character: jclLine.indexOf("PGM=") },
+				end: { line: lineNumber, character: jclLine.indexOf("PGM=") + 4 + name.length }
 			},
-			message: `STEPLIB DSN length exceeds max allowed length of 44.`,
-			source: 'ex'
+			message: msg
 		};
 		diagnostics.push(diagnostic);
 	}
@@ -787,65 +851,22 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
-connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
-	console.log('We received an file change event');
-});
-
-// This handler provides the initial list of the completion items.
-connection.onCompletion(
-	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-		// The pass parameter contains the position of the text document in
-		// which code complete got requested. For the example we ignore this
-		// info and always provide the same completion items.
-
-		// //get the current word
-		// // const text = _textDocumentPosition.textDocument.uri;
-		// const currentLine = JCLLines[_textDocumentPosition.position.line];
-		// // const prevLine = JCLLines[_textDocumentPosition.position.line-1];
-		// // const nextLine = JCLLines[_textDocumentPosition.position.line+1];
-		// if (currentLine.includes("DD") && !currentLine.includes("DISP")){
-		// 	const returnDDArray: CompletionItem[] = [];
-		// 	DDArray.forEach(ddname => {
-		// 		returnDDArray.push({
-		// 			label: ddname
-		// 		});
-		// 	});
-		// 	return returnDDArray;
-		// }
-
-		if (!returnedOnCompletion) {
-			if (autoSuggest.length > 0) {
-				const autoSuggest1 = removeDuplicates(autoSuggest);
-				for (let i = 0; i < autoSuggest1.length; i++) {
-					returnedOnCompletion = true;
-					autocomp.push({
-						label: autoSuggest1[i],
-						kind: CompletionItemKind.Text,
-						data: autocomp.length + i
-					});
-				}
-			}
-
-		}
-		return autocomp;
+function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
+	if (!hasConfigurationCapability) {
+		return Promise.resolve(globalSettings);
 	}
-);
-
-// This handler resolves additional information for the item selected in
-// the completion list.
-connection.onCompletionResolve(
-	(item: CompletionItem): CompletionItem => {
-		if (item.data === 1) {
-			item.detail = 'TypeScript details';
-			item.documentation = 'TypeScript documentation';
-		} else if (item.data === 2) {
-			item.detail = 'JavaScript details';
-			item.documentation = 'JavaScript documentation';
-		}
-		return item;
+	let result = documentSettings.get(resource);
+	if (!result) {
+		result = connection.workspace.getConfiguration({
+			scopeUri: resource,
+			section: 'languageServerExample'
+		});
+		documentSettings.set(resource, result);
 	}
-);
+	console.log(`setting from server`);
+	return result;
+}
+
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
