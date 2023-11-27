@@ -22,12 +22,181 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
+interface AutoComp {
+	label: string;
+	kind: any;
+	data: number;
+}
+
+const autoSuggest: string[] = [];
+
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
 
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+let returnedOnCompletion: boolean = false;
+
+const autocomp: AutoComp[] = [
+	{
+		label: 'JOB',
+		kind: CompletionItemKind.Text,
+		data: 1
+	},
+	{
+		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=,MSGCLASS=,NOTIFY=&SYSUID",
+		kind: CompletionItemKind.Text,
+		data: 2
+	},
+	{
+		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=,MSGCLASS=,\n//               TIME=,NOTIFY=&SYSUID",
+		kind: CompletionItemKind.Text,
+		data: 3
+	},
+	{
+		label: 'EXEC',
+		kind: CompletionItemKind.Text,
+		data: 4
+	},
+	{
+		label: 'EXEC PGM=,PARM=',
+		kind: CompletionItemKind.Text,
+		data: 5
+	},
+	{
+		label: 'STEPLIB',
+		kind: CompletionItemKind.Text,
+		data: 6
+	},
+	{
+		label: 'STEPLIB DD DISP=,DSN=""',
+		kind: CompletionItemKind.Text,
+		data: 7
+	},
+	{
+		label: 'DD',
+		kind: CompletionItemKind.Text,
+		data: 8
+	},
+	{
+		label: 'DSN',
+		kind: CompletionItemKind.Text,
+		data: 9
+	},
+	{
+		label: 'JCLLIB',
+		kind: CompletionItemKind.Text,
+		data: 10
+	},
+	{
+		label: 'JCLLIB ORDER=""',
+		kind: CompletionItemKind.Text,
+		data: 11
+	},
+	{
+		label: 'DD DISP=,DSN=""',
+		kind: CompletionItemKind.Text,
+		data: 12
+	},
+	{
+		label: 'DD SYSOUT=*',
+		kind: CompletionItemKind.Text,
+		data: 13
+	},
+	{
+		label: 'DD DUMMY',
+		kind: CompletionItemKind.Text,
+		data: 14
+	},
+	{
+		label: 'DISP=(,CATLG,DELETE),',
+		kind: CompletionItemKind.Text,
+		data: 15
+	},
+	{
+		label: 'DISP=(NEW,CATLG,DELETE),',
+		kind: CompletionItemKind.Text,
+		data: 16
+	},
+	{
+		label: 'DISP=(NEW,DELETE,DELETE),',
+		kind: CompletionItemKind.Text,
+		data: 17
+	},
+	{
+		label: 'DISP=(OLD,KEEP,DELETE),',
+		kind: CompletionItemKind.Text,
+		data: 18
+	},
+	{
+		label: 'SPACE=(CYL,(1,1))',
+		kind: CompletionItemKind.Text,
+		data: 19
+	},
+	{
+		label: 'SPACE=(TRK,(10,,10),,CONTIG)',
+		kind: CompletionItemKind.Text,
+		data: 20
+	},
+	{
+		label: 'VOLUME=',
+		kind: CompletionItemKind.Text,
+		data: 21
+	},
+	{
+		label: 'UNIT=',
+		kind: CompletionItemKind.Text,
+		data: 22
+	},
+	{
+		label: 'VOLUME=SER=',
+		kind: CompletionItemKind.Text,
+		data: 23
+	},
+	{
+		label: 'AVGREC=',
+		kind: CompletionItemKind.Text,
+		data: 24
+	},
+	{
+		label: 'DATACLAS=',
+		kind: CompletionItemKind.Text,
+		data: 25
+	},
+	{
+		label: 'RECFM=',
+		kind: CompletionItemKind.Text,
+		data: 26
+	},
+	{
+		label: 'REGION=',
+		kind: CompletionItemKind.Text,
+		data: 27
+	},
+	{
+		label: 'PGM=IEBGENER',
+		kind: CompletionItemKind.Text,
+		data: 28
+	},
+	{
+		label: 'PGM=SORT',
+		kind: CompletionItemKind.Text,
+		data: 29
+	},
+	{
+		label: 'PGM=IEBCOPY',
+		kind: CompletionItemKind.Text,
+		data: 30
+	},
+	{
+		label: 'PGM=IDCAMS',
+		kind: CompletionItemKind.Text,
+		data: 31
+	}
+
+];
+
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -109,6 +278,32 @@ connection.onDidChangeConfiguration(change => {
 	documents.all().forEach(validateTextDocument);
 });
 
+function addVariabletoSuggestion(keyword: string, line: string, index: number) {
+
+	// const index: number = line.indexOf(keyword);
+	console.log(index);
+	if (index > 0) {
+		// const lastindex = line.substring(index+4,80).lastIndexOf(',');
+		const lastcommaindex = line.indexOf(",", index);
+		const lastspaceindex = line.indexOf(" ", index);
+		let autosugvariable = '';
+		if (lastcommaindex < lastspaceindex && lastcommaindex > 0) {
+			autosugvariable = keyword + line.substring(index + keyword.length, lastcommaindex);
+		} else if (lastspaceindex > 0) {
+			autosugvariable = keyword + line.substring(index + keyword.length, lastspaceindex);
+		}
+		console.log(autosugvariable);
+		if (autosugvariable.length > 0) {
+			autoSuggest.push(autosugvariable);
+		}
+
+	}
+}
+
+function removeDuplicates(arr: any[]): any[] {
+	return [...new Set(arr)];
+}
+
 function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
 	if (!hasConfigurationCapability) {
 		return Promise.resolve(globalSettings);
@@ -141,10 +336,72 @@ documents.onDidChangeContent(change => {
 
 async function validateJCL(textDocument: TextDocument): Promise<void> {
 	// The validator creates diagnostics for all uppercase words length 2 and more
+
 	const jclText = textDocument.getText();
+	let lines: string[] = [];
+	lines = jclText.split("\n");
 	const jclLines = jclText.split("\r\n");
 	let lineNumber = 0;
+	
 	const diagnostics: Diagnostic[] = [];
+	lines.forEach(line => {
+		let index = 0;
+		console.log("line: " + line);
+		// Add Parms below to save the Values as autosuggestions
+		
+		index = line.indexOf("DSN=");
+		if (index > 0) {
+			addVariabletoSuggestion("DSN=", line, index);
+		}
+		index =line.indexOf("DISP=");
+		if (index > 0) {
+			addVariabletoSuggestion("DISP=", line, index);
+		}
+		index = line.indexOf("PGM=");
+		if (index > 0) {
+			addVariabletoSuggestion("PGM=", line, index);
+		}
+		index = line.indexOf("NOTIFY=");
+		if (index > 0) {
+			addVariabletoSuggestion("NOTIFY=", line, index);
+
+		}
+		index = line.indexOf("TIME=");
+		if (index > 0) {
+			addVariabletoSuggestion("TIME=", line, index);
+
+		}
+		index = line.indexOf("SET=");
+		if (index > 0){
+			addVariabletoSuggestion("SET=",line,index);
+		}
+		index = line.indexOf("SPACE=");
+		if (index > 0){
+			addVariabletoSuggestion("SPACE=",line,index);
+		}
+		index = line.indexOf("UNIT=");
+		if (index > 0){
+			addVariabletoSuggestion("UNIT=",line,index);
+		}
+		index = line.indexOf("DSNAME=");
+		if (index > 0){
+			addVariabletoSuggestion("DSNAME=",line,index);
+		}
+		index = line.indexOf("SYSOUT=");
+		if (index > 0){
+			addVariabletoSuggestion("SYSOUT=",line,index);
+		}
+		index = line.indexOf("COND=");
+		if (index > 0){
+			addVariabletoSuggestion("COND=",line,index);
+		}
+		index = line.indexOf("PARM=");
+		if (index > 0){
+			addVariabletoSuggestion("PARM=",line,index);
+		}
+
+	});
+
 
 	for (let i = 0; i < jclLines.length; i++) {
 		lineNumber++;
@@ -369,18 +626,21 @@ connection.onCompletion(
 		// The pass parameter contains the position of the text document in
 		// which code complete got requested. For the example we ignore this
 		// info and always provide the same completion items.
-		return [
-			{
-				label: 'TypeScript',
-				kind: CompletionItemKind.Text,
-				data: 1
-			},
-			{
-				label: 'JavaScript',
-				kind: CompletionItemKind.Text,
-				data: 2
+		if (!returnedOnCompletion) {
+			if (autoSuggest.length > 0) {
+				const autoSuggest1 = removeDuplicates(autoSuggest);
+				for (let i = 0; i < autoSuggest1.length; i++) {
+					returnedOnCompletion = true;
+					autocomp.push({
+						label: autoSuggest1[i],
+						kind: CompletionItemKind.Text,
+						data: autocomp.length + i
+					});
+				}
 			}
-		];
+
+		}
+		return autocomp;
 	}
 );
 

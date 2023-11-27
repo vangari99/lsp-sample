@@ -117,6 +117,49 @@ export function activate(context: ExtensionContext) {
 		}
 	});
 
+	let displayHover = vscode.languages.registerHoverProvider('jcl', {
+        provideHover(document, position, token) {
+
+			const { activeTextEditor } = vscode.window;
+		if (activeTextEditor) {
+
+			const document = activeTextEditor.document;
+			// save the file..
+			document.save();
+			// const text = document.getText();
+
+            const range = document.getWordRangeAtPosition(position);
+            const word = document.getText(range);
+
+            if (word == "SYSUID") {
+                return new vscode.Hover({
+                    language: "JCL",
+                    value: "TS4447"
+                });
+            }
+			if (word == "PGMA"){
+				return new vscode.Hover({
+                    language: "JCL",
+                    value: "VIAPCOB"
+                });				
+			}
+			if (word == "PGMB"){
+				return new vscode.Hover({
+                    language: "JCL",
+                    value: "FIBCHECK"
+                });				
+			}
+			if (word == "filename"){
+				return new vscode.Hover({
+                    language: "JCL",
+                    value: "TS4447.DEMO.LOADPDSE"
+                });				
+			}
+		}
+        }
+    });
+
+
 	const addScaler = vscode.commands.registerCommand('lsp-sample.addScaler', () => {
         // Get the active text editor
         const editor = vscode.window.activeTextEditor;
@@ -182,7 +225,7 @@ export function activate(context: ExtensionContext) {
 	console.log('client started and starting server');
 	client.start();
 
-	context.subscriptions.push(syncFiles, syncFile, addScaler);
+	context.subscriptions.push(syncFiles, syncFile, addScaler, displayHover);
 	//subscribe them
 }
 
