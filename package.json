@@ -20,7 +20,7 @@
 		"onLanguage:jcl",
 		"onCommand:lsp-sample.syncFiles",
 		"onCommand:lsp-sample.syncFile",
-		"onCommand:ROCKET-PROJCL.jclCodeSnippets"
+		"onCommand:lsp-sample.jclCodeSnippets"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
@@ -66,9 +66,9 @@
 				"category": "LSP SAMPLE"
 			},
 			{
-				"command": "ROCKET-PROJCL.jclCodeSnippets",
+				"command": "lsp-sample.jclCodeSnippets",
 				"title": "JCL Code Snippets",
-				"category": "ROCKET PROJCL"
+				"category": "LSP SAMPLE"
 			}
 		],
 		"languages": [

@@ -31,7 +31,7 @@ export function activate(context: ExtensionContext) {
 	const codeTemplates: codeTemplate[] = [
 		{
 			type: "SORTCOPY",
-			template: "//STEP01    EXEC PGM=SORT\n//SORTIN    DD DSN=USERID.SORT.INPUT.FILE,DISP=SHR  ---> Input file\n//SORTOUT   DD DSN=USERID.SORT.OUTPUT.FILE,         ---> Output file\n//       DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,\n//       SPACE=(CYL,(1,4),RLSE),\n//       DCB=(RECFM=FB,LRECL=80,BLKSIZE=0\n//SYSIN     DD *\nSORT FIELDS=COPY                            ---> Sort statements\n/*"
+			template: "//STEP01   EXEC PGM=SORT\n//SORTIN   DD  DSN=USERID.SORT.INPUT.FILE,DISP=SHR  ---> Input file\n//SORTOUT  DD  DSN=USERID.SORT.OUTPUT.FILE,         ---> Output file\n//             DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,\n//             SPACE=(CYL,(1,4),RLSE),\n//             DCB=(RECFM=FB,LRECL=80,BLKSIZE=0\n//SYSIN     DD *\n  SORT FIELDS=COPY  \n/*"
 		},
 		{
 			type: "SORTMERGE",
@@ -189,7 +189,7 @@ export function activate(context: ExtensionContext) {
         }
     });
 
-	const getCodeSnippets = vscode.commands.registerCommand('ROCKET-PROJCL.jclCodeSnippets', async () => {
+	const jclCodeSnippets = vscode.commands.registerCommand('lsp-sample.jclCodeSnippets', async () => {
 		const jclPrograms: string[] = ["JOBCARD", "SORT", "IEBGENER", "IEBCOPY", "IDCAMS", "IEFBR14", "IKJEFT01"];
 		let program = await vscode.window.showQuickPick(jclPrograms, {
 			placeHolder: 'Select a Code Snippet',
@@ -304,7 +304,7 @@ export function activate(context: ExtensionContext) {
 	console.log('client started and starting server');
 	client.start();
 
-	context.subscriptions.push(syncFile, displayHover);
+	context.subscriptions.push(syncFile, displayHover, jclCodeSnippets);
 	//subscribe them
 }
 
