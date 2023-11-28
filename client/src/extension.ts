@@ -21,7 +21,7 @@ let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
-
+/*
 	const syncFiles = vscode.commands.registerCommand('lsp-sample.syncFiles', async () => {
 		// This is to sync local file changes to mainframe
 		// get the list of committed files using git vscode api or simple-git api
@@ -75,7 +75,7 @@ export function activate(context: ExtensionContext) {
 
 		vscode.window.showInformationMessage(`Synching JCL process complete...`);
 	});
-
+*/
 	const syncFile = vscode.commands.registerCommand('lsp-sample.syncFile', async () => {
 		// This is to sync local file changes to mainframe
 		// call zosmf rest api to update/create the jcls
@@ -99,7 +99,11 @@ export function activate(context: ExtensionContext) {
 			// save the file..
 			document.save();
 			const text = document.getText();
-			const textToSend = text.replace(/[\\\r\\\n]+/gm, "\n");
+			// const textToSend = text.replace(/[\\\r\\\n]+/gm, "\n");
+			let lines = text.split("\r\n");
+            lines = lines.map((line: string) => (line.substring(0,80)));
+            const textToSend = lines.join('\n');
+
 			const uri: vscode.Uri = document.uri!;
 			const uriPathSplitArray = uri.path.split("/");
 
@@ -121,45 +125,46 @@ export function activate(context: ExtensionContext) {
         provideHover(document, position, token) {
 
 			const { activeTextEditor } = vscode.window;
-		if (activeTextEditor) {
+			if (activeTextEditor) {
+				const document = activeTextEditor.document;
+				// save the file..
+				// document.save();
 
-			const document = activeTextEditor.document;
-			// save the file..
-			document.save();
-			// const text = document.getText();
+				let HlqSETMap = new Map <string, string>();
+				const text = document.getText();
+				let jclLines = text.split("\r\n");
+				jclLines.forEach(line => {
+					if (line.includes(" SET ")) {
+						const match = line.match(/\bSET\s+(\w+)\s*=\s*'([^']+)'/i);
+						if (match) {
+							const keyword = match[1];
+							const value = match[2];
+							HlqSETMap.set(keyword, value);
+						}
+					}
+				
+				});
+				HlqSETMap.set("SYSUID", "TS4447");
 
-            const range = document.getWordRangeAtPosition(position);
-            const word = document.getText(range);
+				const range = document.getWordRangeAtPosition(position);
+				const word = document.getText(range);
 
-            if (word == "SYSUID") {
-                return new vscode.Hover({
-                    language: "JCL",
-                    value: "TS4447"
-                });
-            }
-			if (word == "PGMA"){
-				return new vscode.Hover({
-                    language: "JCL",
-                    value: "VIAPCOB"
-                });				
+				let HLQValue: string | undefined = "";
+				if (HlqSETMap.size > 0) {
+					HLQValue = HlqSETMap.get(word);
+					if (HLQValue) {
+						return new vscode.Hover({
+							language: "JCL",
+							value: HLQValue
+						});
+					}
+				}
+
 			}
-			if (word == "PGMB"){
-				return new vscode.Hover({
-                    language: "JCL",
-                    value: "FIBCHECK"
-                });				
-			}
-			if (word == "filename"){
-				return new vscode.Hover({
-                    language: "JCL",
-                    value: "TS4447.DEMO.LOADPDSE"
-                });				
-			}
-		}
         }
     });
 
-
+/*
 	const addScaler = vscode.commands.registerCommand('lsp-sample.addScaler', () => {
         // Get the active text editor
         const editor = vscode.window.activeTextEditor;
@@ -186,7 +191,7 @@ export function activate(context: ExtensionContext) {
 			editor.setDecorations(decoratorDecorationType, [{ range }]);
 		}
 	});
-
+*/
 
 	const serverModule = context.asAbsolutePath(
 		path.join('server', 'out', 'server.js')
@@ -225,7 +230,7 @@ export function activate(context: ExtensionContext) {
 	console.log('client started and starting server');
 	client.start();
 
-	context.subscriptions.push(syncFiles, syncFile, addScaler, displayHover);
+	context.subscriptions.push(syncFile, displayHover);
 	//subscribe them
 }
 

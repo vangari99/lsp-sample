@@ -290,7 +290,7 @@ connection.onInitialize((params: InitializeParams) => {
 			completionProvider: {
 				resolveProvider: true
 			},
-			hoverProvider: true
+			hoverProvider: false
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
