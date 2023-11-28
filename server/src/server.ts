@@ -47,12 +47,12 @@ const autocomp: AutoComp[] = [
 		data: 1
 	},
 	{
-		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=,MSGCLASS=,NOTIFY=&SYSUID",
+		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=A,MSGCLASS=A,NOTIFY=&SYSUID",
 		kind: CompletionItemKind.Text,
 		data: 2
 	},
 	{
-		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=,MSGCLASS=,\n//               TIME=,NOTIFY=&SYSUID",
+		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=A,MSGCLASS=A,\n//             TIME=1440,NOTIFY=&SYSUID",
 		kind: CompletionItemKind.Text,
 		data: 3
 	},
@@ -62,7 +62,7 @@ const autocomp: AutoComp[] = [
 		data: 4
 	},
 	{
-		label: 'EXEC PGM=,PARM=',
+		label: 'EXEC PGM=pgmname,REGION=nnnnM',
 		kind: CompletionItemKind.Text,
 		data: 5
 	},
@@ -72,7 +72,7 @@ const autocomp: AutoComp[] = [
 		data: 6
 	},
 	{
-		label: 'STEPLIB DD DISP=,DSN=""',
+		label: 'STEPLIB DD DISP=SHR,DSN="dsname"',
 		kind: CompletionItemKind.Text,
 		data: 7
 	},
@@ -97,7 +97,7 @@ const autocomp: AutoComp[] = [
 		data: 11
 	},
 	{
-		label: 'DD DISP=,DSN=""',
+		label: 'DD DISP=,DSN="dsname"',
 		kind: CompletionItemKind.Text,
 		data: 12
 	},
@@ -485,6 +485,36 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 			diagnostics.push(diagnostic);
 		}
 
+		if (jclLines[i].includes("CLASS=")) {
+			const classPattern = /\bCLASS=([^,\s]*)\b/;
+			const matches: string[] | null = jclLines[i].match(classPattern);
+			if (matches) {
+				const classValue = matches[1];
+				const classDiagnostics = validateClass(jclLines[i], classValue, lineNumber - 1, "CLASS");
+				if (classDiagnostics) {
+					classDiagnostics.forEach(diagnostic => {
+						// update jclDiagnostics
+						diagnostics.push(diagnostic);
+					});
+				}
+			}
+		}
+
+		if (jclLines[i].includes("MSGCLASS=")) {
+			const msgClassPattern = /MSGCLASS=([^,\s]+)/;
+			const matches: string[] | null = jclLines[i].match(msgClassPattern);
+			if (matches) {
+				const msgclassValue = matches[1];
+				const msgClassDiagnostics = validateClass(jclLines[i], msgclassValue, lineNumber - 1, "MSGCLASS");
+				if (msgClassDiagnostics) {
+					msgClassDiagnostics.forEach(diagnostic => {
+						// update jclDiagnostics
+						diagnostics.push(diagnostic);
+					});
+				}
+			}
+		}
+
 		if (jclLines[i].includes("PGM=")) {
 			const pgmPattern = /PGM=([^,\s]+)/;
 			const matches: string[] | null = jclLines[i].match(pgmPattern);
@@ -547,11 +577,41 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
-function validateRegion(jclLine: string, value: string, lineNumber: number) {
+function validateClass(jclLine: string, value: string, lineNumber: number, parameter: string) {
 	const diagnostics: Diagnostic[] = [];
+	const classChars = new RegExp("^[A-Z0-9]$");
+	let msg = '';
+	if (value.length === 0) {
+		msg = `No ${parameter} parm value provided.`;
+	} else if (value.length > 1) {
+		msg = `Invalid ${parameter} parm length.`;
+	} else if (!classChars.test(value)) {
+		msg = `Invalid character in ${parameter} parm. Valid characters are A-Z, 0-9.`;
+	}
+
+	if (msg !== '') {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			range: {
+				// start: {line: lineNumber, character: }
+				start: { line: lineNumber, character: jclLine.indexOf(parameter)}, 
+				end: { line: lineNumber, character: jclLine.indexOf(parameter) + parameter.length + 1 + value.length }
+			},
+			message: msg
+		};
+		diagnostics.push(diagnostic);
+	}
+	return diagnostics;
+
+}
+
+function validateRegion(jclLine: string, value: string, lineNumber: number) {
+	const diagnostics: Diagnostic[] =[];
 	let msg = '';
 	const numericVal = value.slice(0, value.length - 1);
-	if (value.length > 5) {
+	if (value.length === 0) {
+		msg = "No value for REGION parm provided.";
+	} else if (value.length > 5 || value.length < 2) {
 		msg = "Invalid REGION parm length.";
 	} else if (!hasAllDigits.test(numericVal)) {
 		msg = "Non-digit value provided in REGION size.";
@@ -580,7 +640,7 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 	const diagnostics: Diagnostic[] = [];
 	const ddPattern = /DSN=([^,(\s]+)/;
 	const digits = /^\d/;
-	const dsnPattern = /^[A-Za-z0-9@#\\$-]+$/;
+//	const dsnPattern = /^[A-Za-z0-9@#\\$-]+$/;
 
 	const matches: string[]|null = jclLine.match(ddPattern);
 	if (matches) {
@@ -777,7 +837,11 @@ function validateMemberName(jclLine: string, text: string, lineNumber: number) {
 	const name: string = text.trim();
 	const diagnostics: Diagnostic[] = [];
 	let msg: string = '';
-	if (name !== '') {
+	if (name.length === 0) {
+		msg = "No value for PGM parm provided.";
+	} else if (name.startsWith("&")) {
+		// do nothing- as it can be a variable
+	} else if (name !== '') {
 		if (name.length > 8) {
 			msg = 'PGM name is limited to 8 characters in length.';
 		} else if (digits.test(name.charAt(0)) || name.charAt(0) === '-') {
@@ -785,9 +849,8 @@ function validateMemberName(jclLine: string, text: string, lineNumber: number) {
 		} else if (!dsnPattern.test(name)) {
 			msg = 'Invalid character in PGM value.';
 		}
-	} else {
-		msg = 'No value for PGM provided.';
-	}
+	} 
+
 	if (msg !== '') {
 		const diagnostic: Diagnostic = {
 			severity: DiagnosticSeverity.Error,
