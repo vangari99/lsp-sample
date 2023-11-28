@@ -247,7 +247,7 @@ const digits = new RegExp(/^\d/);   //starts with digits
 const hasAllDigits = new RegExp(/^\d+$/);
 const dsnPattern = new RegExp("^[A-Za-z0-9@#\\$-]+$");
 
-// const DDArray: string[] = [];
+const DDArray: string[] = [];
 const JCLLines: string[] = [];
 const HlqSETMap = new Map <string, string>();
 
@@ -343,20 +343,21 @@ connection.onCompletion(
 		// which code complete got requested. For the example we ignore this
 		// info and always provide the same completion items.
 
-		// //get the current word
-		// // const text = _textDocumentPosition.textDocument.uri;
-		// const currentLine = JCLLines[_textDocumentPosition.position.line];
-		// // const prevLine = JCLLines[_textDocumentPosition.position.line-1];
-		// // const nextLine = JCLLines[_textDocumentPosition.position.line+1];
-		// if (currentLine.includes("DD") && !currentLine.includes("DISP")){
-		// 	const returnDDArray: CompletionItem[] = [];
-		// 	DDArray.forEach(ddname => {
-		// 		returnDDArray.push({
-		// 			label: ddname
-		// 		});
-		// 	});
-		// 	return returnDDArray;
-		// }
+		//get the current word
+		// const text = _textDocumentPosition.textDocument.uri;
+		const currentLine = JCLLines[_textDocumentPosition.position.line];
+		// const prevLine = JCLLines[_textDocumentPosition.position.line-1];
+		// const nextLine = JCLLines[_textDocumentPosition.position.line+1];
+		if (currentLine.includes(" DD ") && !currentLine.includes("DISP")){
+			const returnDDArray: CompletionItem[] = [];
+			const DDArrayUnique = removeDuplicates(DDArray); 
+			DDArrayUnique.forEach(ddname => {
+				returnDDArray.push({
+					label: ddname
+				});
+			});
+			return returnDDArray;
+		}
 
 		if (!returnedOnCompletion) {
 			if (autoSuggest.length > 0) {
@@ -452,7 +453,7 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 	
 	const diagnostics: Diagnostic[] = [];
 	JCLLines.length = 0;
-	// DDArray.length = 0;
+	DDArray.length = 0;
 
 	for (let i = 0; i < jclLines.length; i++) {
 		lineNumber++;
@@ -462,14 +463,14 @@ async function validateJCL(textDocument: TextDocument): Promise<void> {
 		checkForAddVariabletoSuggestion(jclLines[i]);
 
 		// keep track of SET stmts and store its key-values pairs for hover functionality.
-		if (jclLines[i].includes(" SET ")) {
-			const match = jclLines[i].match(/\bSET\s+(\w+)\s*=\s*'([^']+)'/i);
-			if (match) {
-				const keyword = match[1];
-				const value = match[2];
-				HlqSETMap.set(keyword, value);
-			}
-		}
+		// if (jclLines[i].includes(" SET ")) {
+		// 	const match = jclLines[i].match(/\bSET\s+(\w+)\s*=\s*'([^']+)'/i);
+		// 	if (match) {
+		// 		const keyword = match[1];
+		// 		const value = match[2];
+		// 		HlqSETMap.set(keyword, value);
+		// 	}
+		// }
 
 		// error if continuation does start within col 16
 		if (jclLines[i].startsWith("//              ") && 
@@ -645,7 +646,7 @@ function validateDD(textDocument: TextDocument, jclLine: string, lineNumber: int
 	const matches: string[]|null = jclLine.match(ddPattern);
 	if (matches) {
 		dsnLiteral = matches[1];
-		// DDArray.push(dsnLiteral);
+		DDArray.push(dsnLiteral);
 	}
 
 	if (dsnLiteral.length <= 0 || dsnLiteral.length > 44) {
@@ -767,47 +768,13 @@ function checkForAddVariabletoSuggestion(line: string) {
 		if (index > 0) {
 			addVariabletoSuggestion("DISP=", line, index);
 		}
-		index = line.indexOf("PGM=");
-		if (index > 0) {
-			addVariabletoSuggestion("PGM=", line, index);
-		}
-		index = line.indexOf("NOTIFY=");
-		if (index > 0) {
-			addVariabletoSuggestion("NOTIFY=", line, index);
-
-		}
-		index = line.indexOf("TIME=");
-		if (index > 0) {
-			addVariabletoSuggestion("TIME=", line, index);
-
-		}
 		index = line.indexOf("SET=");
 		if (index > 0){
 			addVariabletoSuggestion("SET=",line,index);
 		}
-		index = line.indexOf("SPACE=");
-		if (index > 0){
-			addVariabletoSuggestion("SPACE=",line,index);
-		}
-		index = line.indexOf("UNIT=");
-		if (index > 0){
-			addVariabletoSuggestion("UNIT=",line,index);
-		}
-		index = line.indexOf("DSNAME=");
-		if (index > 0){
-			addVariabletoSuggestion("DSNAME=",line,index);
-		}
 		index = line.indexOf("SYSOUT=");
 		if (index > 0){
 			addVariabletoSuggestion("SYSOUT=",line,index);
-		}
-		index = line.indexOf("COND=");
-		if (index > 0){
-			addVariabletoSuggestion("COND=",line,index);
-		}
-		index = line.indexOf("PARM=");
-		if (index > 0){
-			addVariabletoSuggestion("PARM=",line,index);
 		}
 }
 
