@@ -19,7 +19,8 @@
 	"activationEvents": [
 		"onLanguage:jcl",
 		"onCommand:lsp-sample.syncFiles",
-		"onCommand:lsp-sample.syncFile"
+		"onCommand:lsp-sample.syncFile",
+		"onCommand:ROCKET-PROJCL.jclCodeSnippets"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
@@ -63,6 +64,11 @@
 				"command": "lsp-sample.syncFile",
 				"title": "Sync the updated file",
 				"category": "LSP SAMPLE"
+			},
+			{
+				"command": "ROCKET-PROJCL.jclCodeSnippets",
+				"title": "JCL Code Snippets",
+				"category": "ROCKET PROJCL"
 			}
 		],
 		"languages": [

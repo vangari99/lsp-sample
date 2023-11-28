@@ -21,6 +21,31 @@ let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
+
+	interface codeTemplate {
+		type: string
+		template: string
+	}
+	// The server is implemented in node
+
+	const codeTemplates: codeTemplate[] = [
+		{
+			type: "SORTCOPY",
+			template: "//STEP01    EXEC PGM=SORT\n//SORTIN    DD DSN=USERID.SORT.INPUT.FILE,DISP=SHR  ---> Input file\n//SORTOUT   DD DSN=USERID.SORT.OUTPUT.FILE,         ---> Output file\n//       DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,\n//       SPACE=(CYL,(1,4),RLSE),\n//       DCB=(RECFM=FB,LRECL=80,BLKSIZE=0\n//SYSIN     DD *\nSORT FIELDS=COPY                            ---> Sort statements\n/*"
+		},
+		{
+			type: "SORTMERGE",
+			template: "//MERGE    EXEC PGM=SORT\n//SYSOUT   DD   SYSOUT=A\n//SORTIN01 DD   DSN=USERID.MASTER,DISP=SHR\n//SORTIN02 DD   DSN=USERID.NEW,DISP=SHR\n//SORTOUT  DD   DSN=USERID.SORT.OUTPUT.FILE,DISP=OLD\n//SYSIN    DD   *\nMERGE  FIELDS=(110,5,CH,A,1,75,CH,A) \n/*\n"
+		},
+		{
+			type: "JOBCARD",
+			template: "//JOBNAME JOB 'ACCT#','ACCOUNT-NAME',CLASS=,MSGCLASS=,\n               MSGLEVEL=(1,1),REGION=0M,NOTIFY=&SYSUID"
+		},
+		{
+			type: "IEBCOPY",
+			template: "//STEP001  EXEC  PGM=IEBCOPY\n//SYSPRINT DD  SYSOUT=A\n//SYSOUT1  DD  DSNAME=userid.TEST.DATA.IN,\n//             DISP=SHR,UNIT=DISK,\n//             VOL=SER=1234\n//SYSOUT2  DD  DSNAME=userid.TEST.DATA.OUT,\n//             DISP=(NEW,KEEP),\n//             SPACE=(TRK,(10,22,40),RLSE),\n//             UNIT=DISK,VOL=SER=1234,\n//SYSIN    DD DUMMY\n/*\n"
+		},
+	];
 /*
 	const syncFiles = vscode.commands.registerCommand('lsp-sample.syncFiles', async () => {
 		// This is to sync local file changes to mainframe
@@ -164,6 +189,30 @@ export function activate(context: ExtensionContext) {
         }
     });
 
+	const getCodeSnippets = vscode.commands.registerCommand('ROCKET-PROJCL.jclCodeSnippets', async () => {
+		const jclPrograms: string[] = ["JOBCARD", "SORT", "IEBGENER", "IEBCOPY", "IDCAMS", "IEFBR14", "IKJEFT01"];
+		let program = await vscode.window.showQuickPick(jclPrograms, {
+			placeHolder: 'Select a Code Snippet',
+			ignoreFocusOut: true,
+			canPickMany: false
+		});
+		console.log(program);
+
+		if (program === "SORT") {
+
+			const sortPrograms: string[] = ["SORTCOPY", "SORTMERGE", "SORTOMIT","SYNCSORT"];
+			program = await vscode.window.showQuickPick(sortPrograms, {
+				placeHolder: 'Select a SORT utility',
+				ignoreFocusOut: true,
+				canPickMany: false
+			});
+		}
+
+		addCodeSnippets(program);
+
+	});
+
+
 /*
 	const addScaler = vscode.commands.registerCommand('lsp-sample.addScaler', () => {
         // Get the active text editor
@@ -225,6 +274,31 @@ export function activate(context: ExtensionContext) {
 		serverOptions,
 		clientOptions
 	);
+
+	function addCodeSnippets(program: string) {
+		for (let i = 0; i < codeTemplates.length; i++) {
+			if (codeTemplates[i].type === program) {
+				const editor = vscode.window.activeTextEditor;
+				if (editor) {
+					// Access the document and content
+					// const document = editor.document;
+					const editor = vscode.window.activeTextEditor;
+					if (editor) {
+						editor.edit((editBuilder) => {
+							// Get the position at the end of the document
+							const endOfDocument = editor.document.positionAt(editor.document.getText().length);
+							// Append the new content at the end of the document
+							const newText = codeTemplates[i].template;
+							editBuilder.insert(endOfDocument, newText);
+						});
+
+					}
+				}
+			}
+		}
+
+	}
+
 
 	// Start the client. This will also launch the server
 	console.log('client started and starting server');
