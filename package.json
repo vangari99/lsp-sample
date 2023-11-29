@@ -1,5 +1,5 @@
 {
-	"name": "lsp-sample",
+	"name": "jcl-sw",
 	"description": "A language server example",
 	"author": "Microsoft Corporation",
 	"license": "MIT",
@@ -18,9 +18,9 @@
 	},
 	"activationEvents": [
 		"onLanguage:jcl",
-		"onCommand:lsp-sample.syncFiles",
-		"onCommand:lsp-sample.syncFile",
-		"onCommand:lsp-sample.jclCodeSnippets"
+		"onCommand:jcl-sw.syncFiles",
+		"onCommand:jcl-sw.syncFile",
+		"onCommand:jcl-sw.jclCodeSnippets"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
@@ -49,26 +49,26 @@
 		},
 		"keybindings": [
 			{
-			  "command": "lsp-sample.syncFile",
+			  "command": "jcl-sw.syncFile",
 			  "key": "ctrl+s",
 			  "mac": "cmd+alt+s"
 			}
 		],
 		"commands": [
 			{
-				"command": "lsp-sample.syncFiles",
+				"command": "jcl-sw.syncFiles",
 				"title": "Sync the updated files",
-				"category": "LSP SAMPLE"
+				"category": "JCL SW"
 			},
 			{
-				"command": "lsp-sample.syncFile",
+				"command": "jcl-sw.syncFile",
 				"title": "Sync the updated file",
-				"category": "LSP SAMPLE"
+				"category": "JCL SW"
 			},
 			{
-				"command": "lsp-sample.jclCodeSnippets",
+				"command": "jcl-sw.jclCodeSnippets",
 				"title": "JCL Code Snippets",
-				"category": "LSP SAMPLE"
+				"category": "JCL SW"
 			}
 		],
 		"languages": [

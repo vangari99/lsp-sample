@@ -47,7 +47,7 @@ export function activate(context: ExtensionContext) {
 		},
 	];
 /*
-	const syncFiles = vscode.commands.registerCommand('lsp-sample.syncFiles', async () => {
+	const syncFiles = vscode.commands.registerCommand('jcl-sw.syncFiles', async () => {
 		// This is to sync local file changes to mainframe
 		// get the list of committed files using git vscode api or simple-git api
 		// call zosmf rest api to update/create the jcls
@@ -101,7 +101,7 @@ export function activate(context: ExtensionContext) {
 		vscode.window.showInformationMessage(`Synching JCL process complete...`);
 	});
 */
-	const syncFile = vscode.commands.registerCommand('lsp-sample.syncFile', async () => {
+	const syncFile = vscode.commands.registerCommand('jcl-sw.syncFile', async () => {
 		// This is to sync local file changes to mainframe
 		// call zosmf rest api to update/create the jcls
 		// make sure upon commit a jenkins pipeline is triggered
@@ -189,7 +189,7 @@ export function activate(context: ExtensionContext) {
         }
     });
 
-	const jclCodeSnippets = vscode.commands.registerCommand('lsp-sample.jclCodeSnippets', async () => {
+	const jclCodeSnippets = vscode.commands.registerCommand('jcl-sw.jclCodeSnippets', async () => {
 		const jclPrograms: string[] = ["JOBCARD", "SORT", "IEBGENER", "IEBCOPY", "IDCAMS", "IEFBR14", "IKJEFT01"];
 		let program = await vscode.window.showQuickPick(jclPrograms, {
 			placeHolder: 'Select a Code Snippet',
@@ -214,7 +214,7 @@ export function activate(context: ExtensionContext) {
 
 
 /*
-	const addScaler = vscode.commands.registerCommand('lsp-sample.addScaler', () => {
+	const addScaler = vscode.commands.registerCommand('jcl-sw.addScaler', () => {
         // Get the active text editor
         const editor = vscode.window.activeTextEditor;
 
