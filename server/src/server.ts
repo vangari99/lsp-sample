@@ -52,7 +52,12 @@ const autocomp: AutoComp[] = [
 		data: 2
 	},
 	{
-		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=A,MSGCLASS=A,\n//             TIME=1440,NOTIFY=&SYSUID",
+		label: "JOB 'ACCT#','ACCOUNT-NAME',CLASS=A,MSGCLASS=A,NOTIFY=&SYSUID",
+		kind: CompletionItemKind.Text,
+		data: 2
+	},
+	{
+		label: "JOBNAME  JOB 'ACCT#','ACCOUNT-NAME',CLASS=A,MSGCLASS=A,\n//             TIME=1440,NOTIFY=&SYSUID",
 		kind: CompletionItemKind.Text,
 		data: 3
 	},
@@ -66,11 +71,11 @@ const autocomp: AutoComp[] = [
 		kind: CompletionItemKind.Text,
 		data: 5
 	},
-	{
-		label: 'STEPLIB',
-		kind: CompletionItemKind.Text,
-		data: 6
-	},
+	// {
+	// 	label: 'STEPLIB',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 6
+	// },
 	{
 		label: 'STEPLIB DD DISP=SHR,DSN=""',
 		kind: CompletionItemKind.Text,
@@ -82,25 +87,25 @@ const autocomp: AutoComp[] = [
 		data: 8
 	},
 	{
-		label: 'DSN',
+		label: 'DSN=',
 		kind: CompletionItemKind.Text,
 		data: 9
 	},
-	{
-		label: 'JCLLIB',
-		kind: CompletionItemKind.Text,
-		data: 10
-	},
+	// {
+	// 	label: 'JCLLIB',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 10
+	// },
 	{
 		label: 'JCLLIB ORDER=""',
 		kind: CompletionItemKind.Text,
 		data: 11
 	},
-	{
-		label: 'DD DISP=,DSN=""',
-		kind: CompletionItemKind.Text,
-		data: 12
-	},
+	// {
+	// 	label: 'DD DISP=,DSN=""',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 12
+	// },
 	{
 		label: 'DD SYSOUT=*',
 		kind: CompletionItemKind.Text,
@@ -141,36 +146,36 @@ const autocomp: AutoComp[] = [
 		kind: CompletionItemKind.Text,
 		data: 20
 	},
-	{
-		label: 'VOLUME=',
-		kind: CompletionItemKind.Text,
-		data: 21
-	},
-	{
-		label: 'UNIT=',
-		kind: CompletionItemKind.Text,
-		data: 22
-	},
-	{
-		label: 'VOLUME=SER=',
-		kind: CompletionItemKind.Text,
-		data: 23
-	},
-	{
-		label: 'AVGREC=',
-		kind: CompletionItemKind.Text,
-		data: 24
-	},
-	{
-		label: 'DATACLAS=',
-		kind: CompletionItemKind.Text,
-		data: 25
-	},
-	{
-		label: 'RECFM=',
-		kind: CompletionItemKind.Text,
-		data: 26
-	},
+	// {
+	// 	label: 'VOLUME=',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 21
+	// },
+	// {
+	// 	label: 'UNIT=',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 22
+	// },
+	// {
+	// 	label: 'VOLUME=SER=',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 23
+	// },
+	// {
+	// 	label: 'AVGREC=',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 24
+	// },
+	// {
+	// 	label: 'DATACLAS=',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 25
+	// },
+	// {
+	// 	label: 'RECFM=',
+	// 	kind: CompletionItemKind.Text,
+	// 	data: 26
+	// },
 	{
 		label: 'REGION=',
 		kind: CompletionItemKind.Text,
@@ -207,12 +212,12 @@ const autocomp: AutoComp[] = [
 		data: 33
 	},
 	{
-		label: 'STEPnn   EXEC  PGM=pgmname',
+		label: 'STEPNAME EXEC PGM=pgmname',
 		kind: CompletionItemKind.Text,
 		data: 34
 	},
 	{
-		label: 'SORTIN   DD DSN=TS4447.SORT.IN,DISP=SHR',
+		label: 'SORTIN   DD  DSN=TS4447.SORT.IN,DISP=SHR',
 		kind: CompletionItemKind.Text,
 		data: 35
 	},
@@ -235,7 +240,12 @@ const autocomp: AutoComp[] = [
 		label: 'SYSIN    DD *\n  SORT FIELDS=COPY\n/*',
 		kind: CompletionItemKind.Text,
 		data: 39
-	}
+	},
+	{
+		label: 'DISP=SHR',
+		kind: CompletionItemKind.Text,
+		data: 40
+	},
 
 ];
 
